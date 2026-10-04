@@ -1,170 +1,314 @@
-# Calendar
+<div align="center">
 
-A highly customizable calendar library for Android and Compose Multiplatform, backed by RecyclerView for the view system, and LazyRow/LazyColumn for compose.
+# 📅 Рабочий календарь
 
-[![Check](https://github.com/kizitonwose/Calendar/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/kizitonwose/Calendar/actions/workflows/check.yml)
-[![License](https://img.shields.io/badge/License-MIT-0097A7.svg)](https://github.com/kizitonwose/Calendar/blob/main/LICENSE.md)
-[![Twitter](https://img.shields.io/badge/Twitter-@kizitonwose-9C27B0.svg)](https://twitter.com/kizitonwose)
-[![Android Library](https://img.shields.io/badge/dynamic/xml.svg?label=Android%20Library&color=blue&url=https://repo1.maven.org/maven2/com/kizitonwose/calendar/core/maven-metadata.xml&query=(//metadata/versioning/versions/version)[not(contains(text(),%27-%27))][last()])](https://central.sonatype.com/search?q=g:com.kizitonwose.calendar)
-[![Multiplatform Library](https://img.shields.io/badge/dynamic/xml.svg?label=Multiplatform%20Library&color=blue&url=https://repo1.maven.org/maven2/com/kizitonwose/calendar/compose-multiplatform/maven-metadata.xml&query=(//metadata/versioning/versions/version)[not(contains(text(),%27-%27))][last()])](https://central.sonatype.com/search?q=g:com.kizitonwose.calendar)
+**Личный календарь смен для Android: график работы, отработанные часы, заработок, аванс и зарплата,
+отпуска и больничные. Всё считается и хранится только на телефоне — без интернета и аккаунтов.**
 
-> 📱 **Рабочий календарь** — Android-приложение для учёта смен, отработанных часов, заработка и выплат,
-> построенное на этой библиотеке: см. [workcalendar/README.md](workcalendar/README.md).
+[![Сборка и тесты](https://github.com/cenior-pomidor/Calendar/actions/workflows/workcalendar.yml/badge.svg)](https://github.com/cenior-pomidor/Calendar/actions/workflows/workcalendar.yml)
+![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)
+![Kotlin 2.3](https://img.shields.io/badge/Kotlin-2.3-7F52FF?logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)
+![Без интернета](https://img.shields.io/badge/%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D0%B5-%D1%82%D0%BE%D0%BB%D1%8C%D0%BA%D0%BE%20%D0%BD%D0%B0%20%D1%82%D0%B5%D0%BB%D0%B5%D1%84%D0%BE%D0%BD%D0%B5-555)
+![Vibe-coded with Claude Opus 5.5](https://img.shields.io/badge/vibe--coded-Claude%20Opus%205.5-D97757?logo=claude&logoColor=white)
+[![MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE.md)
 
-**With this library, your calendar will look however you want it to.**
+### [⬇️ Скачать APK — последняя версия](https://github.com/cenior-pomidor/Calendar/releases/latest)
 
-![Preview Phone](https://user-images.githubusercontent.com/15170090/197389318-b3925b65-aed9-4e1f-a778-ba73007cbdf7.png)
+</div>
 
-![Preview Web Tablet](https://github.com/user-attachments/assets/df7b11bb-23f8-423a-bbd4-9ade376a14be)
+> [!NOTE]
+> **Приложение целиком написано вайб-кодингом с помощью Claude Opus 5.5** (Anthropic) в Claude Code.
+> Автор сформулировал требования в техническом задании и проверял результат на своём телефоне;
+> архитектуру, код, тесты, сборку, CI, релизы и эту документацию сделала модель.
+> Подробности — в разделе [«Как это сделано»](#-как-это-сделано).
 
-## Features
+<table>
+  <tr>
+    <td align="center"><img src="workcalendar/docs/screenshots/calendar.jpg" width="200" alt="Календарь"><br><sub>Календарь: смены, подтверждённые часы, отпуск</sub></td>
+    <td align="center"><img src="workcalendar/docs/screenshots/notification.jpg" width="200" alt="Уведомление после смены"><br><sub>Уведомление после смены</sub></td>
+    <td align="center"><img src="workcalendar/docs/screenshots/notification-reply.jpg" width="200" alt="Ввод часов в шторке"><br><sub>Ввод часов прямо в шторке</sub></td>
+    <td align="center"><img src="workcalendar/docs/screenshots/vacation.jpg" width="200" alt="Отпуск"><br><sub>Отпуск с расчётом отпускных</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="workcalendar/docs/screenshots/finance.jpg" width="200" alt="Финансы"><br><sub>Финансы</sub></td>
+    <td align="center"><img src="workcalendar/docs/screenshots/shift.jpg" width="200" alt="Новая смена"><br><sub>Новая смена</sub></td>
+    <td align="center"><img src="workcalendar/docs/screenshots/onboarding.jpg" width="200" alt="Мастер настройки"><br><sub>Мастер первого запуска</sub></td>
+    <td align="center"><img src="workcalendar/docs/screenshots/settings.jpg" width="200" alt="Настройки"><br><sub>Настройки</sub></td>
+  </tr>
+</table>
 
-- [x] Week, month, or year modes - Show a week-based calendar, or the typical month calendar, or a year-based calendar.
-- [x] Single, multiple, or range selection - Total flexibility to implement the date selection
-  whichever way you like.
-- [x] Disable desired dates - Prevent selection of some dates by disabling them.
-- [x] Boundary dates - Limit the calendar date range.
-- [x] Custom date view/composable - Make your day cells look however you want, with any
-  functionality you want.
-- [x] Custom calendar view/composable - Make your calendar look however you want, with whatever
-  functionality you want.
-- [x] Custom first day of the week - Use any day as the first day of the week.
-- [x] Horizontal or vertical scrolling calendar.
-- [x] HeatMap calendar - Suitable for showing how data changes over time, like GitHub's contribution
-  chart.
-- [x] Year/Month/Week headers and footers - Add headers/footers of any kind on each year/month/week.
-- [x] Easily scroll to any date/week/month/year on the calendar via swipe actions or programmatically.
-- [x] Use all RecyclerView/LazyRow/LazyColumn customizations since the calendar extends from
-  RecyclerView for the view system and uses LazyRow/LazyColumn for compose.
-- [x] Design your calendar [however you want.](https://github.com/kizitonwose/Calendar/issues/1) The
-  library provides the logic, you provide the views/composables.
+## Содержание
 
-## Sample project
+- [Установка](#-установка)
+- [Возможности](#-возможности)
+- [Как устроено](#-как-устроено)
+- [Зависимости и библиотеки](#-зависимости-и-библиотеки)
+- [Разрешения](#-разрешения)
+- [Сборка из исходников](#-сборка-из-исходников)
+- [Проверка качества](#-проверка-качества)
+- [Как это сделано](#-как-это-сделано)
+- [Известные ограничения](#-известные-ограничения)
+- [Структура репозитория](#-структура-репозитория)
+- [Лицензия и благодарности](#-лицензия-и-благодарности)
 
-It's important to check out the sample app. There are lots of examples provided for both view and compose implementations. 
-Most techniques that you would want to implement are already done in the examples.
+## 📲 Установка
 
-Download the Android sample app [here](https://github.com/kizitonwose/Calendar/releases/download/2.5.4/sample.apk)
+1. Скачайте `WorkCalendar-<версия>.apk` со страницы [последнего релиза](https://github.com/cenior-pomidor/Calendar/releases/latest).
+2. Откройте файл на телефоне и разрешите установку из этого источника
+   (если Play Protect предупредит о неизвестном приложении — «Всё равно установить»).
+3. При первом запуске пройдите мастер настройки и разрешите уведомления.
 
-View the Android sample app's source code [here](https://github.com/kizitonwose/Calendar/tree/main/sample)
+Требуется **Android 8.0 или новее**. Все сборки подписаны одним ключом, поэтому новые версии
+ставятся поверх старых **без потери данных**. Подробная инструкция пользователя —
+[workcalendar/README.md](workcalendar/README.md).
 
-View the multiplatform sample project online at https://calendar.kizitonwose.dev
+## ✨ Возможности
 
-View the multiplatform sample project's source code [here](https://github.com/kizitonwose/Calendar/tree/main/compose-multiplatform/sample)
+### Календарь и графики работы
+- Месячный календарь: цвет ячейки показывает статус дня — смена запланирована, идёт, ждёт отметки
+  часов, часы подтверждены, дополнительная смена, не состоялась, отменена или перенесена, отпуск,
+  больничный, другое отсутствие. Праздники и перенесённые выходные выделены, точка — заметка к дню.
+- В ячейке — время смены или отработанные часы, по желанию — заработок за день.
+- Сводка месяца: часы факт / план, подтверждённый заработок, прогноз, количество смен.
+- Панель выбранного дня: смены с действиями, отсутствие, заметка, кнопки «Смена», «Отпуск»,
+  «Больничный», «Другое»; долгое нажатие на день — сразу новая смена.
+- Плавное перелистывание месяцев свайпом и стрелками, кнопка «Сегодня»; в альбомной ориентации
+  календарь и панель дня стоят рядом.
+- Шаблоны графиков: по дням недели (своё время для каждого дня) и циклы любой длины — 5/2, 2/2,
+  3/3, сутки через трое, сутки через двое, день/ночь/2 выходных, свой цикл; неоплачиваемый
+  перерыв; смены через полночь и суточные.
+- Применение графика с выбранной даты или на период с **предпросмотром**: сколько смен будет
+  добавлено, изменено и удалено и какие дни, изменённые вручную, сохранятся. Подтверждённые смены
+  графиком не меняются никогда.
+- Автозаполнение календаря на несколько месяцев вперёд (горизонт продлевается сам), история
+  применённых графиков с копией шаблона.
+- Производственный календарь РФ на 2025–2026 годы (праздники по ст. 112 ТК РФ и переносы),
+  свои праздники и рабочие дни, опция «не ставить смены в праздники».
 
-## Setup
+### Учёт отработанного времени
+- После окончания смены приходит уведомление с кнопками **«Полностью (8 ч)»**, **«Ввести часы»**
+  (ответ прямо в шторке: `7,5`, `7:30`, `7ч30м`, `0` — смена не состоялась) и **«Отложить»**.
+- Варианты отметки: полностью по плану, количество часов, фактическое начало и окончание с
+  перерывом, «смена не состоялась».
+- Пока часы не внесены, смена не входит в заработок; проигнорированное уведомление ничего не
+  начисляет. Раз в день приходит напоминание о неотмеченных сменах, на отдельном экране их можно
+  отметить все по плану.
+- Подтверждённые смены защищены: исправление — только после явной разблокировки и с записью в
+  журнал; повторное подтверждение заменяет часы, а не добавляет (двойного начисления нет).
+- Ночные смены через полночь и переход на летнее/зимнее время учитываются корректно.
 
-The library provides the following artifacts: 
+### Ручное управление сменами
+- Смена на любую дату, в том числе дополнительная в выходной; время, продолжительность
+  (например «24 ч»), перерыв, название, заметка и индивидуальная ставка.
+- Перенос на другую дату (исходный день помечается «перенесена → дата»), отмена, восстановление,
+  «не состоялась», удаление, добавление в системный календарь.
+- Ручные изменения приоритетнее графика и не перезаписываются при его повторном применении.
 
-`com.kizitonwose.calendar:compose`: The compose artifact for Android projects. This uses the [java.time](https://docs.oracle.com/javase/8/docs/api/java/time/package-summary.html) APIs. 
+### Заработок и ставки
+- Почасовая ставка с датой начала действия; подтверждённые смены хранят ставку на момент
+  подтверждения, а при изменении ставки «задним числом» приложение предлагает пересчитать
+  прошлые смены или оставить их как есть.
+- Надбавки в процентах: ночные (интервал ночи настраивается), праздничные, сверхурочные,
+  за дополнительные смены.
+- Прогноз по плану и факт по подтверждённым часам, НДФЛ и удержания, цель на месяц.
+  Без настроенного налога сумма подписывается как «расчётный заработок», а не «на руки».
 
-`com.kizitonwose.calendar:compose-multiplatform`: The compose artifact for Compose Multiplatform projects. This uses the [kotlinx-datetime](https://github.com/Kotlin/kotlinx-datetime) library and supports Android, iOS, js, WasmJs and Desktop platforms.
+### Аванс и зарплата
+- Правила выплат: день выплаты, месяц (тот же или следующий), перенос с выходных, период расчёта
+  (например, 1–15 число).
+- Сумма — процент заработка за период, остаток за месяц минус другие выплаты, фиксированная сумма
+  или **своя формула** (`ЗАРАБОТОК * 40%`, `min(ЗАРАБОТОК; 30000)`, переменные ЧАСЫ, СТАВКА,
+  ПЛАН, МЕСЯЦ и другие), вычет НДФЛ.
+- Ожидаемые суммы и отметка «получено» с фактической суммой, датой и комментарием; полученный аванс
+  уменьшает остаток зарплаты; начисления и выплаты хранятся раздельно.
+- Напоминание за N дней до выплаты с расчётной суммой, а если данных не хватает — с объяснением,
+  чего именно.
 
-`com.kizitonwose.calendar:view`: The view artifact for Android projects. This uses the [java.time](https://docs.oracle.com/javase/8/docs/api/java/time/package-summary.html) APIs and can exist alongside the Android compose artifact in an Android project if needed.
+### Отпуска, больничные и другие отсутствия
+- Даты или количество дней (праздники внутри отпуска не считаются днями отпуска и продлевают его).
+- Оплачиваемое или без оплаты; сумма вручную или **автоматический расчёт**:
+  - отпускные — по запланированным сменам или по среднему заработку за 12 месяцев
+    (ст. 139 ТК РФ, 29,3 дня);
+  - больничный — по 255-ФЗ: средний дневной заработок за 2 года / 730 × процент по стажу
+    (60/80/100 %) × дни болезни, с минимумом от МРОТ и предельной базой; первые 3 дня оплачивает
+    работодатель, остальные — Соцфонд.
+- Смены графика на эти даты сохраняются в истории как «заменены отсутствием» и не входят в учёт
+  часов и заработка — двойного учёта нет.
+- Уведомления: отпускные — за 2 рабочих дня до начала отпуска с суммой; больничный — утром
+  в ожидаемые дни выплат.
+- Заработок прошлых периодов и стаж до текущей работы — для точного расчёта.
 
-#### Step 1
+### Финансы и статистика
+- Месяц, произвольный период или год; сравнение с прошлым месяцем; прогресс к цели.
+- Начисления (работа, отпускные, больничные, премии и удержания, НДФЛ), часы (факт / план,
+  дополнительные, сверхурочные, ночные, праздничные), смены (отработано, пропущено, отменено),
+  средний заработок за смену и за час.
+- История операций с фильтрами, графики «факт / план» за 3, 6 и 12 месяцев.
+- Раздел можно закрыть PIN-кодом и отпечатком пальца.
 
-**This step is required ONLY if your Android app's `minSdkVersion` is below 26. Jump to [step 2](#step-2) if this does not apply to you.**
+### Уведомления
+- Окончание смены, неотмеченные часы, аванс и зарплата, отпускные, больничные — каждое
+  включается отдельно, время настраивается, «Отложить» — на заданное время.
+- Точные будильники, без повторов и дубликатов; пропущенное уведомление доставляется позже,
+  пока оно актуально; устаревшее ежедневное напоминание не показывается.
+- Расписание восстанавливается после перезагрузки, обновления приложения, смены времени и часового
+  пояса; каждые 6 часов фоновая задача проверяет его и продлевает график.
+- Нажатие на уведомление открывает нужный экран.
 
-Android apps with `minSdkVersion` below 26 have to enable [Java 8+ API desugaring](https://developer.android.com/studio/write/java8-support#library-desugaring) for backward compatibility since `java.time` classes were added in Java 8 which is supported natively starting from Android SDK 26. To set up your project for desugaring, you need to first ensure that you are using [Android Gradle plugin](https://developer.android.com/studio/releases/gradle-plugin#updating-plugin) 4.0.0 or higher.
+### Данные и прочее
+- Резервная копия всех данных и настроек в файл JSON (например, в Google Диск) и восстановление
+  из него; еженедельные автокопии; перед восстановлением сохраняется копия текущих данных.
+- Экспорт в CSV для Excel и Google Таблиц (разделитель «;», UTF-8): смены, отсутствия, выплаты,
+  начисления — по отдельности или ZIP-архивом; экспорт смен в `.ics`.
+- Журнал изменений: подтверждения и исправления часов, ставки, графики, выплаты.
+- Виджет на главный экран: месяц с цветами статусов, сегодняшняя смена, неотмеченные часы,
+  кнопки «+ Смена» и «Отметить часы».
+- Поиск по заметкам, сменам, отсутствиям, выплатам, суммам и датам; заметки к дням.
+- Мастер первого запуска: дата трудоустройства, стаж, ставка, график, дни выплат, уведомления.
+- Светлая и тёмная тема, цвета Material You; сброс настроек и полное удаление данных с
+  двойным подтверждением.
 
-Then include the following in your app's `build.gradle` file:
+## 🧩 Как устроено
 
-```groovy
-android {
-  defaultConfig {
-    // Required ONLY if your minSdkVersion is below 21
-    multiDexEnabled true
-  }
-
-  compileOptions {
-    // Enable support for the new language APIs
-    coreLibraryDesugaringEnabled true
-    // Set Java compatibility (version can be higher if desired)
-    sourceCompatibility JavaVersion.VERSION_1_8
-    targetCompatibility JavaVersion.VERSION_1_8
-  }
-
-  kotlinOptions {
-    // Also add this for Kotlin projects (version can be higher if desired)
-    jvmTarget = "1.8"
-  }
-}
-
-dependencies {
-  coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:<latest-version>'
-}
+```
+workcalendar/
+├── domain/   чистая бизнес-логика на Kotlin/JVM, без зависимостей от Android:
+│             генерация графиков, расчёт заработка и выплат, отпускные и больничные,
+│             планирование уведомлений, резервные копии, экспорт CSV/ICS + юнит-тесты
+├── app/      Android-приложение: Room, репозитории, уведомления и будильники,
+│             WorkManager, виджет на Glance, интерфейс на Jetpack Compose
+└── ci/       сценарий проверки на эмуляторе (adb + uiautomator)
 ```
 
-You can find the latest version of `desugar_jdk_libs` [here](https://mvnrepository.com/artifact/com.android.tools/desugar_jdk_libs).
+- **Смены материализуются в базе.** Шаблон превращается в записи смен с уникальным ключом даты,
+  поэтому повторная генерация идемпотентна и не создаёт дубликатов. Удалённые смены графика
+  запоминаются, ручные изменения защищены от перезаписи.
+- **Деньги — в копейках** (`Long`), без ошибок округления чисел с плавающей точкой.
+- **Снимки расчёта.** Подтверждённая смена хранит ставку и итог на момент подтверждения, поэтому
+  изменение ставки не переписывает прошлое без вашего согласия.
+- **Уведомления планируются чистой функцией** в `domain`, приложение синхронизирует их с
+  `AlarmManager` и хранит состояние доставки в базе — отсюда отсутствие повторов.
+- **Время смен — местное**, длительность считается с учётом перехода на летнее и зимнее время.
+- **Схема базы данных** экспортируется в [`workcalendar/app/schemas`](workcalendar/app/schemas)
+  для будущих миграций.
 
-#### Step 2A - For pure Android projects without multiplatform setup
+## 📦 Зависимости и библиотеки
 
-Add the desired calendar library (view or compose) to your app's `build.gradle.kts`:
+| Библиотека | Версия | Для чего |
+|---|---|---|
+| [Kotlin](https://kotlinlang.org/) (плагины Compose Compiler, Serialization) | 2.3.0 | язык |
+| [Jetpack Compose](https://developer.android.com/jetpack/compose): UI, Foundation, Runtime | 1.10.1 | интерфейс |
+| [Material 3](https://m3.material.io/) для Compose | 1.4.0 | компоненты, тема, Material You |
+| Material Icons Core | 1.7.8 | иконки |
+| Activity Compose | 1.12.2 | активити, запрос разрешений, выбор файлов |
+| Navigation Compose | 2.9.6 | навигация, переходы из уведомлений и виджета |
+| Lifecycle: runtime-compose, viewmodel-compose | 2.10.0 | ViewModel, подписка на данные |
+| [Room](https://developer.android.com/training/data-storage/room) (+ KSP 2.3.4, Room Gradle Plugin) | 2.8.4 | локальная база данных SQLite |
+| [WorkManager](https://developer.android.com/topic/libraries/architecture/workmanager) | 2.11.0 | фоновая проверка расписания |
+| [Glance](https://developer.android.com/jetpack/compose/glance) AppWidget + Material 3 | 1.1.1 | виджет на главный экран |
+| Biometric | 1.1.0 | вход в «Финансы» по отпечатку |
+| Fragment KTX | 1.8.9 | `FragmentActivity` для окна биометрии |
+| Core KTX | 1.17.0 | расширения Android API |
+| [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines) | 1.10.2 | асинхронность и потоки данных |
+| [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) JSON | 1.9.0 | резервные копии и настройки |
+| desugar_jdk_libs | 2.1.5 | `java.time` на Android 8 |
+| [Calendar](https://github.com/kizitonwose/Calendar) (Kizito Nwose): модули `core`, `data`, `compose` | 2.10.x, исходники в репозитории | месячный календарь `HorizontalCalendar` |
 
-```kotlin
-dependencies {
-  // The view calendar library for Android
-  implementation("com.kizitonwose.calendar:view:<latest-version>")
+**Тесты и инструменты:** JUnit 6.0.2 (Jupiter) и kotlin-test — юнит-тесты; Kotlinter 5.3.0 (ktlint) — стиль кода;
+Gradle 8.14.3, Android Gradle Plugin 8.13.2, JDK 17. **CI:** GitHub Actions,
+[android-emulator-runner](https://github.com/ReactiveCircus/android-emulator-runner) (эмулятор Android 14),
+[action-gh-release](https://github.com/softprops/action-gh-release) (публикация APK).
 
-  // The compose calendar library for Android
-  implementation("com.kizitonwose.calendar:compose:<latest-version>")
-}
+**Платформа:** minSdk 26 (Android 8.0), targetSdk и compileSdk 36 (Android 16).
+
+## 🔐 Разрешения
+
+| Разрешение | Зачем |
+|---|---|
+| `POST_NOTIFICATIONS` | уведомления о сменах и выплатах |
+| `USE_EXACT_ALARM` (Android 13+), `SCHEDULE_EXACT_ALARM` (Android 12) | напоминания точно в срок |
+| `RECEIVE_BOOT_COMPLETED` | восстановление напоминаний после перезагрузки |
+| `USE_BIOMETRIC` | вход в раздел «Финансы» по отпечатку |
+
+Библиотеки добавляют служебные `WAKE_LOCK`, `FOREGROUND_SERVICE`, `ACCESS_NETWORK_STATE` (WorkManager)
+и `USE_FINGERPRINT` (Biometric, для старых версий Android). **Разрешения на доступ в интернет у
+приложения нет** — данные никуда не отправляются.
+
+## 🛠 Сборка из исходников
+
+```bash
+git clone https://github.com/cenior-pomidor/Calendar.git
+cd Calendar
+./gradlew :workcalendar:domain:test          # юнит-тесты бизнес-логики
+./gradlew :workcalendar:app:assembleRelease  # APK → workcalendar/app/build/outputs/apk/release/
 ```
 
-#### Step 2B - For Compose Multiplatform projects
+Нужны JDK 17 и Android SDK 36. Ключ подписи `workcalendar/app/signing/workcalendar.jks` хранится в
+репозитории, чтобы все сборки ставились друг поверх друга. Для своего ключа задайте переменные
+`WORKCAL_KEYSTORE`, `WORKCAL_KEYSTORE_PASSWORD`, `WORKCAL_KEY_ALIAS`, `WORKCAL_KEY_PASSWORD`
+(APK с другой подписью не установится поверх текущего без удаления приложения).
 
-Add the multiplatform calendar library to your project's `build.gradle.kts`:
+## ✅ Проверка качества
 
-```kotlin
-commonMain.dependencies {
-  // The calendar library for compose multiplatform projects
-  // Supports Android, iOS, js, WasmJs and Desktop platforms
-  implementation("com.kizitonwose.calendar:compose-multiplatform:<latest-version>")
-}
-```
+- **53 юнит-теста** бизнес-логики: графики и их повторное применение, расчёт заработка, аванс и
+  зарплата, отпускные и больничные, уведомления, экспорт и резервные копии, переход на летнее время;
+  сценарии 1, 2, 4–10 и 12 из технического задания покрыты отдельными тестами.
+- **CI на каждый push** ([workcalendar.yml](.github/workflows/workcalendar.yml)): тесты →
+  release-APK с R8 → прогон на эмуляторе Android 14:
+  - мастер первого запуска и автозаполнение календаря;
+  - перелистывание месяцев — быстрый, медленный и диагональный свайп, кнопка «Сегодня»;
+  - создание и подтверждение смены, финансы, статистика, настройки, сохранение отпуска;
+  - уведомления: часы эмулятора переводятся на конец смены, проверяются появление уведомления,
+    кнопка «Полностью» и ввод часов прямо в шторке;
+  - любое падение приложения проваливает сборку, скриншоты экранов сохраняются в артефактах.
+- **Релиз** публикуется ручным запуском workflow (`release: true`) только после успешной
+  проверки на эмуляторе.
 
-You can find the latest version of the library on the maven central badge above.
+## 🤖 Как это сделано
 
-Snapshots of the development version are available in [Central Portal Snapshots repository](https://central.sonatype.com/service/rest/repository/browse/maven-snapshots/com/kizitonwose/calendar/).
+Приложение «Рабочий календарь» — весь код в [`workcalendar/`](workcalendar), CI, скрипты проверки
+и документация — **полностью написано вайб-кодингом с помощью Claude Opus 5.5** в
+[Claude Code](https://claude.com/claude-code), без ручного написания кода.
 
-#### Compose UI version compatibility
+- **Автор** поставил задачу подробным техническим заданием на русском языке (требования к
+  графикам, учёту часов, заработку, выплатам, отпускам и больничным, уведомлениям, данным и
+  12 сценариев проверки), тестировал приложение на своём телефоне и присылал замечания — например,
+  видео с подёргиванием календаря при перелистывании месяцев (исправлено в версии 1.0.1).
+- **Модель** спроектировала архитектуру, написала код и тесты, настроила сборку и CI, сама
+  собирала проект в GitHub Actions, смотрела скриншоты и разбор интерфейса с эмулятора, находила
+  и исправляла ошибки, публиковала релизы и написала документацию.
+- **Объём:** около 15,5 тыс. строк Kotlin (приложение — 10,7 тыс., бизнес-логика — 3,8 тыс.,
+  тесты — 1 тыс.). Работа заняла один вечер 4 октября 2026 года: версия 1.0.0 вышла примерно
+  через два часа после начала сессии, 1.0.1 — ещё через час.
+- **Не вайб-кодинг:** библиотека календаря [kizitonwose/Calendar](https://github.com/kizitonwose/Calendar)
+  (модули `core`, `data`, `compose`, `view`, `compose-multiplatform`, `sample`) — оригинальная
+  работа Kizito Nwose; она используется без изменений.
 
-For the compose calendar library, ensure that you are using the library version that matches the Compose UI version in your project. If you use a version of the library that has a higher version of Compose UI than the one in your project, gradle will upgrade the Compose UI version in your project via transitive dependency.
+## 🚧 Известные ограничения
 
-| Compose UI | Android Calendar Library | Multiplatform Calendar Library |
-|:----------:|:------------------------:|:------------------------------:|
-|   1.2.x    |          2.0.x           |               -                |
-|   1.3.x    |      2.1.x - 2.2.x       |               -                |
-|   1.4.x    |          2.3.x           |               -                |
-|   1.5.x    |          2.4.x           |               -                |
-|   1.6.x    |          2.5.x           |             2.5.x              |
-|   1.7.x    |          2.6.x           |             2.6.x              |
-|   1.8.x    |      2.7.x - 2.8.x       |         2.7.x - 2.8.x          |
-|   1.9.x    |          2.9.x           |             2.9.x              |
-|   1.10.x   |          2.10.x          |             2.10.x             |
-|   1.11.x   |          2.10.x          |             2.10.x             |
+- Расчёт отпускных и больничных **ориентировочный**: учтены основные правила (ст. 139 ТК РФ,
+  255-ФЗ), но не все частные случаи — уход за ребёнком, исключаемые периоды, районные
+  коэффициенты, индексация. Сумму всегда можно указать вручную.
+- Производственный календарь встроен на 2025–2026 годы; переносы следующих лет добавляются вручную.
+- НДФЛ — одной ставкой, без прогрессивной шкалы и вычетов.
+- Сверхурочные — всё время сверх плана смены, без разделения на первые 2 часа и последующие.
+- Синхронизации между устройствами нет (данные только на телефоне); для переноса — резервная копия.
+- Автоматическая проверка выполняется на эмуляторе Android 14; приложение собрано под Android 16.
 
-## Usage
+Полный список — в [workcalendar/README.md](workcalendar/README.md#известные-ограничения).
 
-You can find the relevant documentation for the library in the links below.
+## 🗂 Структура репозитория
 
-|[View-based documentation](https://github.com/kizitonwose/Calendar/blob/main/docs/View.md)|[Compose documentation](https://github.com/kizitonwose/Calendar/blob/main/docs/Compose.md)|
-|:-:|:-:|
+| Путь | Что там |
+|---|---|
+| [`workcalendar/`](workcalendar) | приложение «Рабочий календарь»: [`app`](workcalendar/app), [`domain`](workcalendar/domain), [`ci`](workcalendar/ci), [инструкция](workcalendar/README.md) |
+| [`.github/workflows/workcalendar.yml`](.github/workflows/workcalendar.yml) | сборка, тесты, проверка на эмуляторе, публикация релизов |
+| `core/`, `data/`, `compose/` | библиотека календаря, используемая приложением |
+| `view/`, `compose-multiplatform/`, `sample/`, `docs/` | остальные модули, примеры и документация библиотеки — см. [docs/CalendarLibrary.md](docs/CalendarLibrary.md) |
 
-## Migration
+## 📄 Лицензия и благодарности
 
-If you're upgrading from calendar library version 1.x.x to 2.x.x, see the [migration guide](https://github.com/kizitonwose/calendar/blob/main/docs/MigrationGuide.md).
-
-## Share your creations
-
-Made a cool calendar with this library? Share an image [here](https://github.com/kizitonwose/Calendar/issues/1).
-
-## Contributing
-
-Found a bug? feel free to fix it and send a pull request or [open an issue](https://github.com/kizitonwose/Calendar/issues).
-
-## License
-
-Calendar library is distributed under the MIT license.
-See [LICENSE](https://github.com/kizitonwose/Calendar/blob/main/LICENSE.md) for details.
+Репозиторий — форк [kizitonwose/Calendar](https://github.com/kizitonwose/Calendar) и распространяется
+по лицензии MIT, см. [LICENSE.md](LICENSE.md). Спасибо Kizito Nwose за библиотеку календаря.
+Оригинальное описание библиотеки — [docs/CalendarLibrary.md](docs/CalendarLibrary.md).

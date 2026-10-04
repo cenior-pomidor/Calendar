@@ -87,6 +87,12 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+androidComponents {
+    // The app has no instrumentation tests: without this, connectedDebugAndroidTest of the
+    // library CI would try to install the app on emulators older than its minSdk.
+    beforeVariants { variant -> variant.enableAndroidTest = false }
+}
+
 dependencies {
     implementation(project(":workcalendar:domain"))
     implementation(project(":compose"))
