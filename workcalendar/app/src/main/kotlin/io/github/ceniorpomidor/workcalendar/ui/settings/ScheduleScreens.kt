@@ -60,6 +60,7 @@ import io.github.ceniorpomidor.workcalendar.ui.components.LocalSnackbar
 import io.github.ceniorpomidor.workcalendar.ui.components.NumberField
 import io.github.ceniorpomidor.workcalendar.ui.components.ScrollColumn
 import io.github.ceniorpomidor.workcalendar.ui.components.SectionCard
+import io.github.ceniorpomidor.workcalendar.ui.components.StepperField
 import io.github.ceniorpomidor.workcalendar.ui.components.SubScreen
 import io.github.ceniorpomidor.workcalendar.ui.components.SwitchRow
 import io.github.ceniorpomidor.workcalendar.ui.components.TextInput
@@ -132,6 +133,31 @@ fun TemplatesScreen(container: AppContainer, onBack: () -> Unit, onEdit: (Long) 
                         }
                     }
                     ThinDivider()
+                }
+            }
+            val settings by container.settings.settings.collectAsStateWithLifecycle(initialValue = null)
+            settings?.let { s ->
+                SectionCard(title = "Правила применения", icon = AppIcons.Tune) {
+                    StepperField(
+                        "Создавать смены на месяцев вперёд",
+                        s.schedule.horizonMonths,
+                        { v -> scope.launchSafely(snackbar) { container.settings.update { it.copy(schedule = it.schedule.copy(horizonMonths = v)) } } },
+                        1..24,
+                    )
+                    Text("При пролистывании календаря дальше смены создаются автоматически.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Изменения графика по умолчанию применять:", style = MaterialTheme.typography.bodyMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(ApplyFromDefault.TODAY to "с сегодня", ApplyFromDefault.TOMORROW to "с завтра", ApplyFromDefault.NEXT_MONTH to "со след. месяца").forEach { (v, label) ->
+                            FilterChip(
+                                selected = s.schedule.applyFromDefault == v,
+                                onClick = { scope.launchSafely(snackbar) { container.settings.update { it.copy(schedule = it.schedule.copy(applyFromDefault = v)) } } },
+                                label = { Text(label) },
+                            )
+                        }
+                    }
+                    SwitchRow("Сохранять дни, изменённые вручную", "Иначе при применении графика они будут перезаписаны (кроме подтверждённых)", s.schedule.keepUserChanges) { v ->
+                        scope.launchSafely(snackbar) { container.settings.update { it.copy(schedule = it.schedule.copy(keepUserChanges = v)) } }
+                    }
                 }
             }
             SectionCard(title = "Применённые графики", icon = AppIcons.DateRange) {

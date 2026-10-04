@@ -215,14 +215,14 @@ fun ShiftEditScreen(container: AppContainer, shiftId: Long?, date: LocalDate, ex
                     }
                 }
                 NumberField(
-                    label = "Индивидуальная ставка (необязательно)",
+                    label = "Своя ставка для смены",
                     value = rateText,
                     onChange = { rateText = it },
                     suffix = "₽/ч",
                     isError = rateError,
                     supportingText = when {
                         rateError -> "Неверная сумма"
-                        defaultRate != null -> "По умолчанию: ${money(defaultRate)}/ч"
+                        defaultRate != null -> "Необязательно. По умолчанию: ${money(defaultRate)}/ч"
                         else -> "Ставка по умолчанию не задана"
                     },
                     enabled = !locked,

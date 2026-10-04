@@ -162,6 +162,9 @@ class NotificationPlanner(
     private fun payouts(now: LocalDateTime, until: LocalDateTime, payouts: List<PayoutInstance>, delivered: Set<String>): List<PlannedNotification> =
         payouts.mapNotNull { payout ->
             if (!payout.rule.notify || payout.isReceived || payout.key in delivered) return@mapNotNull null
+            // Nothing to remind about: no shifts and no accruals in the period.
+            val amount = payout.amount
+            if (amount is PayoutAmount.Calculated && amount.net.isZero && amount.unconfirmedShifts == 0 && amount.upcomingShifts == 0) return@mapNotNull null
             val trigger = TimeMath.atMinute(payout.payDate.minusDays(payout.rule.notifyDaysBefore.toLong()), settings.payoutMinute)
             if (trigger.isAfter(until)) return@mapNotNull null
             // Deliver late (e.g. the phone was off) while the payday has not passed.

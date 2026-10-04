@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kizitonwose.calendar.core.CalendarDay
@@ -110,6 +111,7 @@ fun DayCell(
     selected: Boolean,
     today: LocalDate,
     showHolidays: Boolean,
+    height: Dp,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
@@ -122,7 +124,8 @@ fun DayCell(
     val holiday = showHolidays && info?.specialDayOff == true
     Box(
         modifier = Modifier
-            .aspectRatio(0.8f)
+            .fillMaxWidth()
+            .height(height)
             .padding(2.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(if (state == DayState.OFF) Color.Transparent else bg.copy(alpha = if (inMonth) 1f else 0.45f))

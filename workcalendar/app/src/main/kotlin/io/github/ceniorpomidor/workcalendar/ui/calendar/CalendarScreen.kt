@@ -36,6 +36,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -168,6 +169,8 @@ fun CalendarScreen(
                 item { MonthSummaryRow(state.summary!!, state.settings.pay.showForecast, onOpenFinance) }
             }
             item {
+                // Cell height follows the width on phones and is limited on tablets and in landscape.
+                val cellHeight = (LocalConfiguration.current.screenWidthDp.dp / 7 * 1.25f).coerceIn(56.dp, 96.dp)
                 HorizontalCalendar(
                     state = calendarState,
                     modifier = Modifier.padding(horizontal = 6.dp),
@@ -178,6 +181,7 @@ fun CalendarScreen(
                             selected = day.date == selected,
                             today = today,
                             showHolidays = state.settings.calendar.showHolidays,
+                            height = cellHeight,
                             onClick = { vm.select(day.date) },
                             onLongClick = {
                                 vm.select(day.date)

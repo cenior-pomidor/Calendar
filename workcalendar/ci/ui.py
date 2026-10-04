@@ -87,30 +87,56 @@ def screenshot(name, inline):
             print(f"=====END {name}=====")
 
 
-def cmd_dump(name, inline="0"):
+def cmd_dump(name, inline="0", expect=None):
     time.sleep(1.5)
     root = dump_xml()
     print(f"===== SCREEN {name} =====")
+    lines = texts(root) if root is not None else []
     if root is None:
         print("(no ui dump)")
-    else:
-        for t in texts(root):
-            print("  " + t.replace("\n", " / "))
+    for t in lines:
+        print("  " + t.replace("\n", " / "))
     screenshot(name, inline == "1")
     if crashed():
         sys.exit(1)
+    if expect and not any(expect in t for t in lines):
+        print(f"!! expected text not found on {name}: {expect}")
+        sys.exit(1)
+
+
+def keyboard_shown():
+    out = adb("shell", "dumpsys", "input_method").stdout
+    return "mInputShown=true" in out or "isInputViewShown=true" in out
+
+
+def cmd_hide_keyboard():
+    if keyboard_shown():
+        adb("shell", "input", "keyevent", "4")
+        print(">> hide keyboard")
+        time.sleep(1)
+
+
+def swipe_up():
+    size = adb("shell", "wm", "size").stdout
+    m = re.search(r"(\d+)x(\d+)", size)
+    w, h = (int(m.group(1)), int(m.group(2))) if m else (1080, 2400)
+    adb("shell", "input", "swipe", str(w // 2), str(h * 7 // 10), str(w // 2), str(h * 3 // 10), "400")
+    time.sleep(1)
 
 
 def cmd_tap(text, exact="0"):
-    root = dump_xml()
-    node = find(root, text, exact == "1") if root is not None else None
-    if node is None:
-        print(f"!! element not found: {text}")
-        return
-    x, y = center(node)
-    adb("shell", "input", "tap", str(x), str(y))
-    print(f">> tap '{text}' at {x},{y}")
-    time.sleep(1.2)
+    cmd_hide_keyboard()
+    for attempt in range(6):
+        root = dump_xml()
+        node = find(root, text, exact == "1") if root is not None else None
+        if node is not None:
+            x, y = center(node)
+            adb("shell", "input", "tap", str(x), str(y))
+            print(f">> tap '{text}' at {x},{y}")
+            time.sleep(1.2)
+            return
+        swipe_up()
+    print(f"!! element not found: {text}")
 
 
 def cmd_type(text):
@@ -131,4 +157,11 @@ def cmd_back():
 
 if __name__ == "__main__":
     command, *args = sys.argv[1:]
-    {"dump": cmd_dump, "tap": cmd_tap, "type": cmd_type, "route": cmd_route, "back": cmd_back}[command](*args)
+    {
+        "dump": cmd_dump,
+        "tap": cmd_tap,
+        "type": cmd_type,
+        "route": cmd_route,
+        "back": cmd_back,
+        "hide-keyboard": cmd_hide_keyboard,
+    }[command](*args)

@@ -95,6 +95,10 @@ class NotificationPlannerTest {
             ),
         )
         assertTrue(planner.plan(now, now.plusDays(10), emptyList(), listOf(received), emptyList(), emptySet()).isEmpty())
+        val empty = payout().copy(amount = PayoutAmount.Calculated(Money.ZERO, Money.ZERO, Money.ZERO, false, 0, 0, emptyList()))
+        assertTrue(planner.plan(now, now.plusDays(10), emptyList(), listOf(empty), emptyList(), emptySet()).isEmpty())
+        val unknown = payout().copy(amount = PayoutAmount.Insufficient("нет ставки"))
+        assertTrue(planner.plan(now, now.plusDays(10), emptyList(), listOf(unknown), emptyList(), emptySet()).single().text.contains("нет ставки"))
     }
 
     @Test

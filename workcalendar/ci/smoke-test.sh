@@ -18,15 +18,17 @@ $UI tap "Далее"
 $UI dump onboarding-rate 0 || exit 1
 $UI tap "Ставка в час"
 $UI type 350
-adb shell input keyevent 111
+$UI hide-keyboard
 $UI tap "Далее"
-$UI dump onboarding-schedule 1 || exit 1
+$UI dump onboarding-schedule 1 "График работы" || exit 1
 $UI tap "Далее"
-$UI dump onboarding-payouts 0 || exit 1
+$UI dump onboarding-payouts 0 "Аванс и зарплата" || exit 1
 $UI tap "Далее"
+$UI dump onboarding-last 0 || exit 1
 $UI tap "Готово"
-sleep 4
-$UI dump calendar 1 || exit 1
+sleep 5
+# The wizard must be finished: the bottom navigation is visible.
+$UI dump calendar 1 "Финансы" || exit 1
 
 YESTERDAY=$(date -d yesterday +%F)
 $UI route "shift/new?date=$YESTERDAY&extra=false"

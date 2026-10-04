@@ -2,6 +2,15 @@ name: Work Calendar app
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Publish a GitHub release with the APK'
+        type: boolean
+        default: false
+      version:
+        description: 'Release version (e.g. 1.0.0)'
+        type: string
+        default: '1.0.0'
   push:
     branches:
       - main
@@ -49,6 +58,14 @@ jobs:
             grep -E "^e: " build.log | head -100
             exit 1
           }
+      - name: Print Room schema
+        run: |
+          for f in workcalendar/app/schemas/*/*.json; do
+            echo "=====SCHEMA $f====="
+            base64 -w 0 "$f"
+            echo
+            echo "=====END SCHEMA====="
+          done
       - name: Collect APK
         run: |
           mkdir -p dist
@@ -99,3 +116,29 @@ jobs:
           name: smoke-test-screenshots
           path: smoke/
           if-no-files-found: ignore
+
+  release:
+    name: Publish release
+    needs: [build, smoke-test]
+    if: github.event_name == 'workflow_dispatch' && inputs.release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: WorkCalendar-apk
+          path: dist
+      - name: Rename APK
+        run: |
+          mv dist/*.apk "dist/WorkCalendar-${{ inputs.version }}.apk"
+          ls -la dist
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: workcalendar-v${{ inputs.version }}
+          name: Рабочий календарь ${{ inputs.version }}
+          target_commitish: ${{ github.sha }}
+          body_path: workcalendar/RELEASE_NOTES.md
+          files: dist/*.apk
