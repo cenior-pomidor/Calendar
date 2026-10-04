@@ -2,7 +2,10 @@ package io.github.ceniorpomidor.workcalendar.ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -13,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -107,7 +111,8 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
     }
 
     Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f)) {
+        // The bottom bar handles the navigation bar inset itself.
+        Box(Modifier.weight(1f).then(if (showBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
             NavHost(navController = nav, startDestination = startDestination) {
                 composable("onboarding") {
                     OnboardingScreen(container, onDone = {

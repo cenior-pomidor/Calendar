@@ -38,10 +38,12 @@ jobs:
           distribution: 'zulu'
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
       - name: Unit tests (business logic)
-        run: ./gradlew :workcalendar:domain:test --stacktrace
+        run: ./gradlew :workcalendar:domain:test
       - name: Build release APK
-        run: ./gradlew :workcalendar:app:assembleRelease --stacktrace
+        run: ./gradlew :workcalendar:app:assembleRelease --console=plain 2>&1 | tee build.log; test ${PIPESTATUS[0]} -eq 0 || { echo '===== COMPILE ERRORS ====='; grep -E '^e: |^w: .*(unresolved|deprecated)' build.log | head -100; exit 1; }
       - name: Collect APK
         run: |
           mkdir -p dist
@@ -56,3 +58,39 @@ jobs:
       - name: Ktlint
         continue-on-error: true
         run: ./gradlew :workcalendar:domain:lintKotlin :workcalendar:app:lintKotlin
+
+  smoke-test:
+    name: Emulator smoke test
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: WorkCalendar-apk
+          path: dist
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install ImageMagick
+        run: command -v convert || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null) || true
+      - name: Run smoke test on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot-save
+          script: bash workcalendar/ci/smoke-test.sh dist
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-screenshots
+          path: smoke/
+          if-no-files-found: ignore

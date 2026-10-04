@@ -8,6 +8,9 @@ A highly customizable calendar library for Android and Compose Multiplatform, ba
 [![Android Library](https://img.shields.io/badge/dynamic/xml.svg?label=Android%20Library&color=blue&url=https://repo1.maven.org/maven2/com/kizitonwose/calendar/core/maven-metadata.xml&query=(//metadata/versioning/versions/version)[not(contains(text(),%27-%27))][last()])](https://central.sonatype.com/search?q=g:com.kizitonwose.calendar)
 [![Multiplatform Library](https://img.shields.io/badge/dynamic/xml.svg?label=Multiplatform%20Library&color=blue&url=https://repo1.maven.org/maven2/com/kizitonwose/calendar/compose-multiplatform/maven-metadata.xml&query=(//metadata/versioning/versions/version)[not(contains(text(),%27-%27))][last()])](https://central.sonatype.com/search?q=g:com.kizitonwose.calendar)
 
+> 📱 **Рабочий календарь** — Android-приложение для учёта смен, отработанных часов, заработка и выплат,
+> построенное на этой библиотеке: см. [workcalendar/README.md](workcalendar/README.md).
+
 **With this library, your calendar will look however you want it to.**
 
 ![Preview Phone](https://user-images.githubusercontent.com/15170090/197389318-b3925b65-aed9-4e1f-a778-ba73007cbdf7.png)
