@@ -52,6 +52,8 @@ timed_swipe() {
 timed_swipe 950 1000 150 1000 300
 if ! $UI dump swipe-fast 0 "$(month_title 1)"; then
   echo "!! WARNING: the first swipe did not change the month; trying once more"
+  # Which events the system delivered to the app: shows whether the moves of the swipe arrived.
+  adb shell dumpsys input | sed -n '/RecentQueue/,/PendingEvent/p' | cut -c1-240 | head -30
   timed_swipe 950 1000 150 1000 300
   $UI dump swipe-fast-retry 1 "$(month_title 1)" || exit 1
 fi
