@@ -1,7 +1,6 @@
 package io.github.ceniorpomidor.workcalendar.domain.pay
 
 import io.github.ceniorpomidor.workcalendar.domain.model.Money
-import io.github.ceniorpomidor.workcalendar.domain.model.PaySettings
 import io.github.ceniorpomidor.workcalendar.domain.model.RatePeriod
 import io.github.ceniorpomidor.workcalendar.domain.model.RateTable
 import io.github.ceniorpomidor.workcalendar.domain.model.Shift
@@ -20,7 +19,6 @@ import java.time.ZoneId
 class PayCalculator(
     val rates: RateTable,
     val holidays: HolidayCalendar,
-    val settings: PaySettings,
     val zone: ZoneId,
 ) {
     /** Hourly rate for the shift: individual rate or the rate effective on its date. */
@@ -44,7 +42,7 @@ class PayCalculator(
         val rate = shift.hourlyRateOverride ?: period?.hourlyRate ?: return null
         val worked = workedMinutes.coerceAtLeast(0)
         val (start, end) = workInterval(shift, worked)
-        val night = TimeMath.nightMinutes(start, end, settings.nightStartMinute, settings.nightEndMinute, zone)
+        val night = TimeMath.nightMinutes(start, end, NIGHT_START_MINUTE, NIGHT_END_MINUTE, zone)
             .coerceAtMost(worked.toLong()).toInt()
         val holiday = holidayMinutes(start, end).coerceAtMost(worked.toLong()).toInt()
         val overtime = if (shift.kind == ShiftKind.REGULAR) (worked - shift.plannedPaidMinutes(zone).toInt()).coerceAtLeast(0) else 0
@@ -102,5 +100,11 @@ class PayCalculator(
             day = day.plusDays(1)
         }
         return total
+    }
+
+    companion object {
+        /** Night time by the Labour Code (art. 96): 22:00-06:00. */
+        const val NIGHT_START_MINUTE: Int = 22 * 60
+        const val NIGHT_END_MINUTE: Int = 6 * 60
     }
 }

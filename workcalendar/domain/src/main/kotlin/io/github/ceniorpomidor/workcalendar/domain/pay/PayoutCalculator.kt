@@ -19,8 +19,9 @@ import java.time.YearMonth
 /** Expected amount of a payout. */
 sealed interface PayoutAmount {
     data class Calculated(
+        /** Earnings the payout is calculated from. */
         val gross: Money,
-        val tax: Money,
+        /** Amount to be paid (for the remainder: minus the other payouts of the month). */
         val net: Money,
         /** Based on planned hours of shifts that are not confirmed yet. */
         val isEstimate: Boolean,
@@ -121,7 +122,6 @@ class PayoutCalculator(
             val amount = when (rule.amountMode) {
                 PayoutAmountMode.FIXED -> PayoutAmount.Calculated(
                     gross = rule.fixedAmount,
-                    tax = Money.ZERO,
                     net = rule.fixedAmount,
                     isEstimate = false,
                     unconfirmedShifts = 0,
@@ -203,13 +203,6 @@ class PayoutCalculator(
         )
     }
 
-    private fun taxed(rule: PayoutRule, gross: Money): Pair<Money, Money> {
-        val percent = pay.settings.taxPercent
-        if (!rule.applyTax || percent <= 0 || gross <= Money.ZERO) return Money.ZERO to gross
-        val tax = gross.percent(percent)
-        return tax to gross - tax
-    }
-
     private fun missingRate(base: Base): PayoutAmount.Insufficient? =
         if (base.missingRate > 0 || base.amount == null) {
             PayoutAmount.Insufficient("Не задана почасовая ставка для ${Formats.shifts(base.missingRate)} периода — укажите ставку в настройках")
@@ -222,13 +215,11 @@ class PayoutCalculator(
         missingRate(base)?.let { return it }
         val earned = base.amount ?: Money.ZERO
         val gross = earned.percent(rule.percent)
-        val (tax, net) = taxed(rule, gross)
         val lines = ArrayList<String>()
         lines += "${rule.percent}% от заработка за ${Formats.period(summary.range.start, summary.range.endInclusive)}: ${Formats.money(earned)}"
         if (summary.scheduledShifts == 0 && summary.bonuses.isZero) lines += "Нет смен за период"
-        if (!tax.isZero) lines += "НДФЛ ${pay.settings.taxPercent}%: −${Formats.money(tax)}"
         if (base.isEstimate) lines += estimateNote(base)
-        return PayoutAmount.Calculated(gross, tax, net, base.isEstimate, base.unconfirmed, base.upcoming, lines)
+        return PayoutAmount.Calculated(gross, gross, base.isEstimate, base.unconfirmed, base.upcoming, lines)
     }
 
     private fun formulaAmount(rule: PayoutRule, summary: PeriodSummary, monthBase: Base, othersNet: Money): PayoutAmount {
@@ -251,22 +242,18 @@ class PayoutCalculator(
             return PayoutAmount.Insufficient("Ошибка в формуле: ${e.message}")
         }
         val gross = Money.ofRubles(value).coerceAtLeast(Money.ZERO)
-        val (tax, net) = taxed(rule, gross)
         val lines = ArrayList<String>()
         lines += "Формула: ${rule.formula}"
         lines += "Заработок за ${Formats.period(summary.range.start, summary.range.endInclusive)}: ${Formats.money(base.amount ?: Money.ZERO)}"
-        if (!tax.isZero) lines += "НДФЛ ${pay.settings.taxPercent}%: −${Formats.money(tax)}"
         if (base.isEstimate) lines += estimateNote(base)
-        return PayoutAmount.Calculated(gross, tax, net, base.isEstimate, base.unconfirmed, base.upcoming, lines)
+        return PayoutAmount.Calculated(gross, gross, base.isEstimate, base.unconfirmed, base.upcoming, lines)
     }
 
     private fun remainderAmount(rule: PayoutRule, monthSummary: PeriodSummary, monthBase: Base, others: List<PayoutInstance>): PayoutAmount {
         missingRate(monthBase)?.let { return it }
         val monthGross = monthBase.amount ?: Money.ZERO
-        val (tax, monthNet) = taxed(rule, monthGross)
         val lines = ArrayList<String>()
         lines += "Заработок за ${Formats.monthTitle(YearMonth.from(monthSummary.range.start)).lowercase()}: ${Formats.money(monthGross)}"
-        if (!tax.isZero) lines += "НДФЛ ${pay.settings.taxPercent}%: −${Formats.money(tax)}"
         var paid = Money.ZERO
         for (other in others) {
             val value = other.effectiveNet
@@ -277,13 +264,13 @@ class PayoutCalculator(
             val label = if (other.isReceived) "получено" else "ожидается"
             lines += "− ${other.rule.name} ($label): ${Formats.money(value)}"
         }
-        var net = monthNet - paid
+        var net = monthGross - paid
         if (net.isNegative) {
             lines += "Выплачено больше начисленного на ${Formats.money(-net)}"
             net = Money.ZERO
         }
         if (monthBase.isEstimate) lines += estimateNote(monthBase)
-        return PayoutAmount.Calculated(monthGross, tax, net, monthBase.isEstimate, monthBase.unconfirmed, monthBase.upcoming, lines)
+        return PayoutAmount.Calculated(monthGross, net, monthBase.isEstimate, monthBase.unconfirmed, monthBase.upcoming, lines)
     }
 
     private fun estimateNote(base: Base): String {

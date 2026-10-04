@@ -61,7 +61,6 @@ data class PayoutRule(
     val weekendShift: WeekendShift = WeekendShift.BEFORE,
     val notify: Boolean = true,
     val notifyDaysBefore: Int = 1,
-    val applyTax: Boolean = true,
     val sortOrder: Int = 0,
 ) {
     init {

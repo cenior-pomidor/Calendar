@@ -39,7 +39,6 @@ fun SettingsScreen(container: AppContainer, settings: AppSettings, onNavigate: (
                 )
                 SettingRow("График работы", "Шаблоны смен и их применение к календарю", AppIcons.EventRepeat, onClick = { onNavigate("settings/templates") })
                 SettingRow("Ставки и надбавки", "Почасовая ставка с датами действия, ночные, праздничные", AppIcons.Ruble, onClick = { onNavigate("settings/rates") })
-                SettingRow("Правила расчёта заработка", "Прогноз, ночное время, налог, цель на месяц", AppIcons.Calculate, onClick = { onNavigate("settings/pay") })
                 SettingRow("Аванс и зарплата", "Дни выплат, суммы и напоминания", AppIcons.Wallet, onClick = { onNavigate("settings/payouts") })
                 SettingRow("Отпуск и больничный", "Правила расчёта и заработок прошлых лет", AppIcons.Vacation, onClick = { onNavigate("settings/absence") })
                 SettingRow("Праздники и переносы", "Производственный календарь", AppIcons.Celebration, onClick = { onNavigate("settings/holidays") })

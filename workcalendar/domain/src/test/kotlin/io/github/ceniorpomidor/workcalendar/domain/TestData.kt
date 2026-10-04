@@ -1,7 +1,6 @@
 package io.github.ceniorpomidor.workcalendar.domain
 
 import io.github.ceniorpomidor.workcalendar.domain.model.Money
-import io.github.ceniorpomidor.workcalendar.domain.model.PaySettings
 import io.github.ceniorpomidor.workcalendar.domain.model.RatePeriod
 import io.github.ceniorpomidor.workcalendar.domain.model.RateTable
 import io.github.ceniorpomidor.workcalendar.domain.model.ScheduleAssignment
@@ -72,6 +71,5 @@ object TestData {
     fun payCalculator(
         rates: RateTable = rates("2020-01-01" to 300),
         holidays: HolidayCalendar = HolidayCalendar(),
-        settings: PaySettings = PaySettings(),
-    ): PayCalculator = PayCalculator(rates, holidays, settings, zone)
+    ): PayCalculator = PayCalculator(rates, holidays, zone)
 }

@@ -55,18 +55,6 @@ data class CalendarSettings(
 )
 
 @Serializable
-data class PaySettings(
-    /** Show preliminary earnings calculated from planned hours. */
-    val showForecast: Boolean = true,
-    val nightStartMinute: Int = 22 * 60,
-    val nightEndMinute: Int = 6 * 60,
-    /** Income tax percent; 0 = taxes are not taken into account. */
-    val taxPercent: Int = 0,
-    /** Target earnings per month; null = not set. */
-    val monthlyTarget: Money? = null,
-)
-
-@Serializable
 data class AbsenceRules(
     val vacationMethod: VacationPayMethod = VacationPayMethod.PLANNED_SHIFTS,
     val sickMethod: SickPayMethod = SickPayMethod.BENEFIT_255FZ,
@@ -139,7 +127,6 @@ data class AppSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
     val calendar: CalendarSettings = CalendarSettings(),
-    val pay: PaySettings = PaySettings(),
     val absence: AbsenceRules = AbsenceRules(),
     val notifications: NotificationSettings = NotificationSettings(),
     val schedule: ScheduleSettings = ScheduleSettings(),

@@ -33,7 +33,7 @@ class NotificationPlannerTest {
             period = DateRange(date("2026-10-01"), date("2026-10-15")),
             payDate = date("2026-10-23"),
             nominalPayDate = date("2026-10-25"),
-            amount = PayoutAmount.Calculated(Money.ofRubles(26_400), Money.ZERO, Money.ofRubles(26_400), false, 0, 0, emptyList()),
+            amount = PayoutAmount.Calculated(Money.ofRubles(26_400), Money.ofRubles(26_400), false, 0, 0, emptyList()),
             payment = null,
         )
     }
@@ -117,7 +117,7 @@ class NotificationPlannerTest {
             ),
         )
         assertTrue(planner.plan(now, now.plusDays(10), emptyList(), listOf(received), emptyList(), emptySet()).isEmpty())
-        val empty = payout().copy(amount = PayoutAmount.Calculated(Money.ZERO, Money.ZERO, Money.ZERO, false, 0, 0, emptyList()))
+        val empty = payout().copy(amount = PayoutAmount.Calculated(Money.ZERO, Money.ZERO, false, 0, 0, emptyList()))
         assertTrue(planner.plan(now, now.plusDays(10), emptyList(), listOf(empty), emptyList(), emptySet()).isEmpty())
         val unknown = payout().copy(amount = PayoutAmount.Insufficient("нет ставки"))
         assertTrue(planner.plan(now, now.plusDays(10), emptyList(), listOf(unknown), emptyList(), emptySet()).single().text.contains("нет ставки"))

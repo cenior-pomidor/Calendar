@@ -9,7 +9,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -23,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -31,7 +29,6 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import io.github.ceniorpomidor.workcalendar.AppContainer
 import io.github.ceniorpomidor.workcalendar.domain.absence.InsuranceExperience
 import io.github.ceniorpomidor.workcalendar.domain.model.AppSettings
-import io.github.ceniorpomidor.workcalendar.domain.model.Money
 import io.github.ceniorpomidor.workcalendar.domain.model.ThemeMode
 import io.github.ceniorpomidor.workcalendar.domain.notify.NotificationKind
 import io.github.ceniorpomidor.workcalendar.domain.notify.PlannedNotification
@@ -41,7 +38,6 @@ import io.github.ceniorpomidor.workcalendar.ui.components.Banner
 import io.github.ceniorpomidor.workcalendar.ui.components.BannerKind
 import io.github.ceniorpomidor.workcalendar.ui.components.DateField
 import io.github.ceniorpomidor.workcalendar.ui.components.LocalSnackbar
-import io.github.ceniorpomidor.workcalendar.ui.components.NumberField
 import io.github.ceniorpomidor.workcalendar.ui.components.ScrollColumn
 import io.github.ceniorpomidor.workcalendar.ui.components.SectionCard
 import io.github.ceniorpomidor.workcalendar.ui.components.StepperField
@@ -103,56 +99,6 @@ fun ProfileScreen(container: AppContainer, settings: AppSettings, onBack: () -> 
                     currency = it.take(4)
                     update { s -> s.copy(currency = currency.ifBlank { "₽" }) }
                 })
-            }
-        }
-    }
-}
-
-@Composable
-fun PaySettingsScreen(container: AppContainer, settings: AppSettings, onBack: () -> Unit) {
-    val update = rememberSettingsUpdater(container)
-    var taxText by rememberSaveable { mutableStateOf(if (settings.pay.taxPercent > 0) settings.pay.taxPercent.toString() else "") }
-    var targetText by rememberSaveable { mutableStateOf(settings.pay.monthlyTarget?.toString()?.replace('.', ',') ?: "") }
-    SubScreen(title = "Правила расчёта", onBack = onBack) { padding ->
-        ScrollColumn(padding) {
-            SectionCard(title = "Предварительный заработок") {
-                SwitchRow(
-                    "Показывать прогноз по плану",
-                    "Сумма по запланированным часам. Окончательный заработок считается только по подтверждённым часам",
-                    settings.pay.showForecast,
-                ) { v -> update { it.copy(pay = it.pay.copy(showForecast = v)) } }
-            }
-            SectionCard(title = "Ночное время") {
-                Text("Часы в этом интервале оплачиваются с ночной надбавкой из ставки (по ТК РФ ночь — 22:00–06:00).", style = MaterialTheme.typography.bodySmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TimeField("Начало ночи", settings.pay.nightStartMinute, { m -> update { it.copy(pay = it.pay.copy(nightStartMinute = m)) } }, modifier = Modifier.weight(1f))
-                    TimeField("Конец ночи", settings.pay.nightEndMinute, { m -> update { it.copy(pay = it.pay.copy(nightEndMinute = m)) } }, modifier = Modifier.weight(1f))
-                }
-            }
-            SectionCard(title = "Налоги") {
-                NumberField(
-                    "НДФЛ, %",
-                    taxText,
-                    { text ->
-                        taxText = text.filter { it.isDigit() }.take(2)
-                        update { it.copy(pay = it.pay.copy(taxPercent = taxText.toIntOrNull()?.coerceIn(0, 50) ?: 0)) }
-                    },
-                    decimal = false,
-                    supportingText = "Пусто или 0 — суммы показываются как расчётный заработок без вычетов. Обычно 13",
-                )
-            }
-            SectionCard(title = "Цель на месяц") {
-                NumberField(
-                    "Минимальный целевой заработок",
-                    targetText,
-                    { text ->
-                        targetText = text
-                        val value = Money.parse(text)
-                        update { it.copy(pay = it.pay.copy(monthlyTarget = value?.takeIf { v -> v.isPositive })) }
-                    },
-                    suffix = "₽",
-                    supportingText = "Прогресс показывается в разделе «Финансы»",
-                )
             }
         }
     }
@@ -261,7 +207,12 @@ fun NotificationSettingsScreen(container: AppContainer, settings: AppSettings, o
                 SwitchRow("Отпускные", "За ${settings.absence.vacationNotifyBusinessDaysBefore} раб. дня до отпуска, с суммой", n.vacationPay) { v ->
                     update { it.copy(notifications = it.notifications.copy(vacationPay = v)) }
                 }
-                SwitchRow("Пособие по больничному", "Утром в дни ожидаемых выплат", n.sickPay) { v ->
+                SwitchRow(
+                    "Пособие по больничному",
+                    "После закрытия больничного: часть работодателя — в ближайший день выплаты аванса или зарплаты, " +
+                        "часть Соцфонда — через ${settings.absence.fundPaymentBusinessDays} раб. дней",
+                    n.sickPay,
+                ) { v ->
                     update { it.copy(notifications = it.notifications.copy(sickPay = v)) }
                 }
                 TimeField("Время уведомления", n.absenceMinute, { m -> update { it.copy(notifications = it.notifications.copy(absenceMinute = m)) } })

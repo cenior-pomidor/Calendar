@@ -150,7 +150,6 @@ fun PayoutRuleEntity.toDomain(): PayoutRule = PayoutRule(
     weekendShift = weekendShift,
     notify = notify,
     notifyDaysBefore = notifyDaysBefore.coerceIn(0, 30),
-    applyTax = applyTax,
     sortOrder = sortOrder,
 )
 
@@ -170,7 +169,6 @@ fun PayoutRule.toEntity(): PayoutRuleEntity = PayoutRuleEntity(
     weekendShift = weekendShift,
     notify = notify,
     notifyDaysBefore = notifyDaysBefore,
-    applyTax = applyTax,
     sortOrder = sortOrder,
 )
 

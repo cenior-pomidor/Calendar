@@ -47,7 +47,7 @@ class CalcContext(
     val holidays: HolidayCalendar,
     val zone: ZoneId,
 ) {
-    val pay: PayCalculator = PayCalculator(rates, holidays, settings.pay, zone)
+    val pay: PayCalculator = PayCalculator(rates, holidays, zone)
     val summaries: SummaryCalculator = SummaryCalculator(pay)
     val payouts: PayoutCalculator = PayoutCalculator(pay, summaries)
 }

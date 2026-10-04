@@ -132,7 +132,8 @@ data class PayoutRuleEntity(
     val weekendShift: WeekendShift,
     val notify: Boolean,
     val notifyDaysBefore: Int,
-    val applyTax: Boolean,
+    /** Not used since income tax was removed from the app; kept so the database schema stays the same. */
+    val applyTax: Boolean = false,
     val sortOrder: Int,
 )
 

@@ -47,8 +47,6 @@ import io.github.ceniorpomidor.workcalendar.domain.model.WeekendShift
 import io.github.ceniorpomidor.workcalendar.domain.pay.Formula
 import io.github.ceniorpomidor.workcalendar.domain.time.DateRange
 import io.github.ceniorpomidor.workcalendar.domain.util.Formats
-import io.github.ceniorpomidor.workcalendar.ui.components.Banner
-import io.github.ceniorpomidor.workcalendar.ui.components.BannerKind
 import io.github.ceniorpomidor.workcalendar.ui.components.ConfirmDialog
 import io.github.ceniorpomidor.workcalendar.ui.components.DateField
 import io.github.ceniorpomidor.workcalendar.ui.components.EmptyState
@@ -350,7 +348,6 @@ fun PayoutRuleEditScreen(container: AppContainer, ruleId: Long?, onBack: () -> U
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                SwitchRow("Вычитать НДФЛ", "Если в правилах расчёта указан процент налога", r.applyTax) { v -> set { it.copy(applyTax = v) } }
             }
             SectionCard(title = "Напоминание", icon = AppIcons.NotificationsActive) {
                 SwitchRow("Напоминать о выплате", "Расчёт работает и без напоминаний", r.notify) { v -> set { it.copy(notify = v) } }
@@ -389,10 +386,6 @@ fun AbsenceRulesScreen(container: AppContainer, settings: AppSettings, onBack: (
     var mrotText by rememberSaveable { mutableStateOf(rules.minimumWage.toString().replace('.', ',')) }
     SubScreen(title = "Отпуск и больничный", onBack = onBack) { padding ->
         ScrollColumn(padding) {
-            Banner(
-                "Расчёт отпускных и больничных по законодательству выполняется только по правилам, выбранным здесь, и является ориентировочным. Сумму всегда можно указать вручную.",
-                BannerKind.INFO,
-            )
             SectionCard(title = "Отпускные", icon = AppIcons.Vacation) {
                 listOf(
                     VacationPayMethod.PLANNED_SHIFTS to "По запланированным сменам: оплата смен по графику, попавших на отпуск",

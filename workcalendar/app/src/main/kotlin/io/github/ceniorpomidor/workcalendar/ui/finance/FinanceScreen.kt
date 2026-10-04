@@ -14,7 +14,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -144,7 +143,7 @@ fun FinanceScreen(
                     action = { TextButton(onClick = onOpenUnconfirmed) { Text("Отметить") } },
                 )
             }
-            HeroCard(summary, state.settings.pay.showForecast, state.settings.pay.monthlyTarget.takeIf { period.mode == PeriodMode.MONTH }, state.previous)
+            HeroCard(summary, state.previous)
             AccrualsCard(summary)
             HoursCard(summary)
             if (period.mode == PeriodMode.MONTH) {
@@ -240,22 +239,16 @@ fun FinanceScreen(
 }
 
 @Composable
-private fun HeroCard(summary: PeriodSummary, showForecast: Boolean, target: Money?, previous: PeriodSummary?) {
+private fun HeroCard(summary: PeriodSummary, previous: PeriodSummary?) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(if (summary.hasTax) "Начислено к выплате (после НДФЛ)" else "Расчётный заработок", style = MaterialTheme.typography.labelLarge)
-            Text(money(if (summary.hasTax) summary.netAccrued else summary.grossAccrued), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("Расчётный заработок", style = MaterialTheme.typography.labelLarge)
+            Text(money(summary.grossAccrued), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text("Подтверждено за работу: ${money(summary.confirmedEarnings)}", style = MaterialTheme.typography.bodyMedium)
-            if (showForecast) {
-                Text(
-                    summary.forecastAccrued?.let { "Прогноз с учётом плана: ${money(it)}" } ?: "Прогноз недоступен: не задана ставка",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
             if (previous != null) {
                 val prev = previous.grossAccrued
                 val diffText = if (prev.isPositive) {
@@ -266,20 +259,7 @@ private fun HeroCard(summary: PeriodSummary, showForecast: Boolean, target: Mone
                 }
                 Text("Предыдущий месяц: ${money(prev)}$diffText", style = MaterialTheme.typography.bodySmall)
             }
-            if (target != null && target.isPositive) {
-                val base = summary.forecastAccrued ?: summary.grossAccrued
-                val progress = (summary.grossAccrued.kopecks.toFloat() / target.kopecks).coerceIn(0f, 1f)
-                Spacer(Modifier.height(4.dp))
-                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-                val left = target - summary.grossAccrued
-                Text(
-                    if (left.isPositive) "Цель ${money(target)}: осталось ${money(left)}" + (if (base >= target) " — по плану достижима" else "") else "Цель ${money(target)} достигнута",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            if (!summary.hasTax) {
-                Text("Без учёта налогов и удержаний — это не гарантированная сумма на руки.", style = MaterialTheme.typography.bodySmall)
-            }
+            Text("Без учёта налогов и удержаний — это не гарантированная сумма на руки.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -296,10 +276,6 @@ private fun AccrualsCard(s: PeriodSummary) {
         if (!s.deductions.isZero) ValueRow("Удержания", "−" + money(s.deductions))
         ThinDivider()
         ValueRow("Итого начислено", money(s.grossAccrued), emphasize = true)
-        if (s.hasTax) {
-            ValueRow("НДФЛ ${s.taxPercent}%", "−" + money(s.tax))
-            ValueRow("К получению", money(s.netAccrued), emphasize = true)
-        }
         if (s.absencesWithoutAmount > 0) {
             Text("Для ${s.absencesWithoutAmount} отсутствий сумма не указана", style = MaterialTheme.typography.bodySmall, color = AppTheme.status.onAwaiting)
         }

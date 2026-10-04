@@ -121,7 +121,6 @@ class PayTest {
         // Forecast adds two unconfirmed planned shifts (8 h each).
         assertEquals(Money.ofRubles(2400 + 1500 + 1200 + 2400 + 2400), s.forecastEarnings)
         assertEquals(Money.ofRubles(5100 + 5000 - 1000), s.grossAccrued)
-        assertEquals(s.grossAccrued, s.netAccrued)
         assertEquals(Money.ofRubles(1700), s.averagePerShift)
     }
 }

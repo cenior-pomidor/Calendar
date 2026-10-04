@@ -185,7 +185,7 @@ fun CalendarScreen(
     ) { padding ->
         val showSummary = state.settings.calendar.showMonthSummary
         val summaryRow: @Composable () -> Unit = {
-            MonthSummaryRow(state.summaries[visibleMonth], state.settings.pay.showForecast, onOpenFinance)
+            MonthSummaryRow(state.summaries[visibleMonth], onOpenFinance)
         }
         val calendar: @Composable (Dp) -> Unit = { cellHeight ->
             Column(Modifier.padding(horizontal = 6.dp)) {
@@ -310,7 +310,7 @@ private fun CalendarState.isAligned(): Boolean {
 
 /** Totals of the month; a month that is not loaded yet keeps the same layout with dashes. */
 @Composable
-private fun MonthSummaryRow(summary: PeriodSummary?, showForecast: Boolean, onClick: () -> Unit) {
+private fun MonthSummaryRow(summary: PeriodSummary?, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -325,9 +325,6 @@ private fun MonthSummaryRow(summary: PeriodSummary?, showForecast: Boolean, onCl
             onClick,
         )
         SummaryTile("Подтверждено", summary?.let { money(it.confirmedEarnings) } ?: none, onClick, AppTheme.status.positive)
-        if (showForecast) {
-            SummaryTile("Прогноз за месяц", summary?.let { s -> s.forecastEarnings?.let { money(it) } ?: "нет ставки" } ?: none, onClick)
-        }
         SummaryTile("Смены", summary?.let { "${it.workedShifts} из ${it.scheduledShifts}" } ?: none, onClick)
     }
 }

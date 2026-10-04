@@ -3,7 +3,6 @@ package io.github.ceniorpomidor.workcalendar.domain
 import io.github.ceniorpomidor.workcalendar.domain.TestData.date
 import io.github.ceniorpomidor.workcalendar.domain.TestData.dateTime
 import io.github.ceniorpomidor.workcalendar.domain.model.Money
-import io.github.ceniorpomidor.workcalendar.domain.model.PaySettings
 import io.github.ceniorpomidor.workcalendar.domain.model.Payment
 import io.github.ceniorpomidor.workcalendar.domain.model.PaymentType
 import io.github.ceniorpomidor.workcalendar.domain.model.PayoutAmountMode
@@ -37,8 +36,8 @@ class PayoutTest {
                 }
             }
 
-    private fun calculator(tax: Int = 0, rates: RateTable = TestData.rates("2020-01-01" to 300)): PayoutCalculator {
-        val pay = PayCalculator(rates, io.github.ceniorpomidor.workcalendar.domain.time.HolidayCalendar(), PaySettings(taxPercent = tax), TestData.zone)
+    private fun calculator(rates: RateTable = TestData.rates("2020-01-01" to 300)): PayoutCalculator {
+        val pay = PayCalculator(rates, io.github.ceniorpomidor.workcalendar.domain.time.HolidayCalendar(), TestData.zone)
         return PayoutCalculator(pay, SummaryCalculator(pay))
     }
 
@@ -68,14 +67,6 @@ class PayoutTest {
         assertTrue(a.isReceived)
         assertEquals(Money.ofRubles(25_000), a.effectiveNet)
         assertEquals(Money.ofRubles(22 * 2400 - 25_000), payouts.single { it.rule.id == 2L }.net())
-    }
-
-    @Test
-    fun `tax is applied when configured`() {
-        val now = dateTime("2026-11-01T00:00")
-        val payouts = calculator(tax = 13).forMonth(october, listOf(advance, salary), octoberShifts(), emptyList(), emptyList(), now)
-        assertEquals(Money.ofRubles(22_968), payouts.single { it.rule.id == 1L }.net())
-        assertEquals(Money.ofRubles(22_968), payouts.single { it.rule.id == 2L }.net())
     }
 
     @Test

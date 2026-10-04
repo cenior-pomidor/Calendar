@@ -50,7 +50,6 @@ import io.github.ceniorpomidor.workcalendar.ui.settings.ChangeLogScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.DisplaySettingsScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.HolidaysScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.NotificationSettingsScreen
-import io.github.ceniorpomidor.workcalendar.ui.settings.PaySettingsScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.PayoutRuleEditScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.PayoutRulesScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.ProfileScreen
@@ -305,7 +304,6 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                 composable("settings/payout/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
                     PayoutRuleEditScreen(container, ruleId = entry.arguments?.getLong("id")?.takeIf { it > 0 }, onBack = { nav.popBackStack() })
                 }
-                composable("settings/pay") { PaySettingsScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
                 composable("settings/absence") { AbsenceRulesScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
                 composable("settings/notifications") { NotificationSettingsScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
                 composable("settings/display") { DisplaySettingsScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }

@@ -306,16 +306,6 @@ fun ShiftCard(shift: Shift, calc: CalcContext?, now: LocalDateTime, actions: Shi
                         fontWeight = FontWeight.Medium,
                     )
                 }
-                ShiftStatus.PLANNED -> {
-                    if (calc?.settings?.pay?.showForecast == true) {
-                        val estimate = calc.pay.estimate(shift)
-                        Text(
-                            estimate?.let { "≈ ${money(it.total)} по плану (начислится после подтверждения)" } ?: "Ставка не задана — сумма не рассчитывается",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
                 ShiftStatus.MOVED -> shift.movedToDate?.let { Text("Перенесена на ${Formats.longDate(it, withYear = false)}", style = MaterialTheme.typography.bodyMedium) }
                 else -> Unit
             }

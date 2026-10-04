@@ -54,25 +54,15 @@ data class PeriodSummary(
     val absencesWithoutAmount: Int,
     val bonuses: Money,
     val deductions: Money,
-    val taxPercent: Int,
     /** Planned shifts without a known hourly rate. */
     val shiftsWithoutRate: Int,
 ) {
     /** Accrued for work, absences and manual accruals minus manual deductions. */
     val grossAccrued: Money get() = confirmedEarnings + vacationPay + sickPay + otherAbsencePay + bonuses - deductions
 
-    val tax: Money get() = if (taxPercent > 0) grossAccrued.coerceAtLeast(Money.ZERO).percent(taxPercent) else Money.ZERO
-
-    val netAccrued: Money get() = grossAccrued - tax
-
-    /** Forecast of the accrued amount including not yet confirmed shifts. */
-    val forecastAccrued: Money? get() = forecastEarnings?.let { it + vacationPay + sickPay + otherAbsencePay + bonuses - deductions }
-
     val averagePerShift: Money? get() = if (workedShifts > 0) confirmedEarnings.scale(1, workedShifts.toLong()) else null
 
     val averagePerHour: Money? get() = if (workedMinutes > 0) confirmedEarnings.scale(60, workedMinutes) else null
-
-    val hasTax: Boolean get() = taxPercent > 0
 }
 
 /** Builds [PeriodSummary]s from shifts, absences and accruals. */
@@ -219,7 +209,6 @@ class SummaryCalculator(private val pay: PayCalculator) {
             absencesWithoutAmount = withoutAmount,
             bonuses = bonuses,
             deductions = deductions,
-            taxPercent = pay.settings.taxPercent,
             shiftsWithoutRate = withoutRate,
         )
     }
