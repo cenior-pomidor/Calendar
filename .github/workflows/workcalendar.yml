@@ -43,7 +43,12 @@ jobs:
       - name: Unit tests (business logic)
         run: ./gradlew :workcalendar:domain:test
       - name: Build release APK
-        run: ./gradlew :workcalendar:app:assembleRelease --console=plain 2>&1 | tee build.log; test ${PIPESTATUS[0]} -eq 0 || { echo '===== COMPILE ERRORS ====='; grep -E '^e: |^w: .*(unresolved|deprecated)' build.log | head -100; exit 1; }
+        run: |
+          ./gradlew :workcalendar:app:assembleRelease --console=plain 2>&1 | tee build.log || {
+            echo "===== COMPILE ERRORS ====="
+            grep -E "^e: " build.log | head -100
+            exit 1
+          }
       - name: Collect APK
         run: |
           mkdir -p dist
