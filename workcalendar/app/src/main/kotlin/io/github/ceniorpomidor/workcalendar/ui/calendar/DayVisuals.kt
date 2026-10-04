@@ -88,9 +88,12 @@ fun compactMoney(value: Money): String {
     }
 }
 
+/** Height of [WeekHeader]; the calendar layout reserves exactly this space. */
+val WEEK_HEADER_HEIGHT = 24.dp
+
 @Composable
 fun WeekHeader(days: List<DayOfWeek>) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+    Row(Modifier.fillMaxWidth().height(WEEK_HEADER_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
         for (day in days) {
             val weekend = day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY
             Text(
@@ -172,8 +175,14 @@ fun DayCell(
             }
             Spacer(Modifier.weight(1f))
             val lines = info?.lines.orEmpty()
+            // Low cells (small screens, landscape) show fewer lines instead of cutting them.
+            val maxLines = when {
+                height >= 64.dp -> 3
+                height >= 52.dp -> 2
+                else -> 1
+            }
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                for (line in lines.take(3)) {
+                for (line in lines.take(maxLines)) {
                     Text(
                         line,
                         fontSize = 10.sp,
@@ -186,7 +195,7 @@ fun DayCell(
                         textAlign = TextAlign.Center,
                     )
                 }
-                info?.earned?.let {
+                info?.earned?.takeIf { height >= 60.dp }?.let {
                     Text(
                         compactMoney(it),
                         fontSize = 9.sp,

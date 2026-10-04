@@ -69,7 +69,8 @@ data class CalendarUiState(
     val settings: AppSettings = AppSettings(),
     val calc: CalcContext? = null,
     val days: Map<LocalDate, DayInfo> = emptyMap(),
-    val summary: PeriodSummary? = null,
+    /** Summaries of the loaded month and its neighbours: shown at once while swiping. */
+    val summaries: Map<YearMonth, PeriodSummary> = emptyMap(),
     val unconfirmedTotal: Int = 0,
     val hasSchedule: Boolean = true,
     val loading: Boolean = true,
@@ -144,8 +145,10 @@ class CalendarViewModel(private val c: AppContainer) : ViewModel() {
             val absence = absences.firstOrNull { date in it.range }
             days[date] = dayInfo(date, dayShifts, absence, notesByDate[date]?.text, calc, now)
         }
-        val summary = calc.summaries.summarize(DateRange.month(m), shifts, absences, emptyList(), now)
-        return CalendarUiState(month = m, now = now, settings = settings, calc = calc, days = days, summary = summary, loading = false)
+        val summaries = listOf(m.minusMonths(1), m, m.plusMonths(1)).associateWith { month ->
+            calc.summaries.summarize(DateRange.month(month), shifts, absences, emptyList(), now)
+        }
+        return CalendarUiState(month = m, now = now, settings = settings, calc = calc, days = days, summaries = summaries, loading = false)
     }
 
     private fun dayInfo(date: LocalDate, shifts: List<Shift>, absence: Absence?, note: String?, calc: CalcContext, now: LocalDateTime): DayInfo {

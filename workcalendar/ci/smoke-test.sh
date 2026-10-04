@@ -30,6 +30,24 @@ sleep 5
 # The wizard must be finished: the bottom navigation is visible.
 $UI dump calendar 1 "Финансы" || exit 1
 
+# Month swipes: the title follows the swipe and the calendar does not stop between two months.
+month_title() {
+  python3 -c "import datetime,sys
+names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+t = datetime.date.today()
+m = t.month - 1 + int(sys.argv[1])
+print(names[m % 12], t.year + m // 12)" "$1"
+}
+adb shell input swipe 950 1000 150 1000 250
+$UI dump swipe-fast 0 "$(month_title 1)" || exit 1
+# A slow drag over 60% of the width, slightly diagonal.
+adb shell input swipe 950 950 300 1150 900
+$UI dump swipe-slow 1 "$(month_title 2)" || exit 1
+adb shell input swipe 150 1000 950 1000 250
+$UI dump swipe-back 0 "$(month_title 1)" || exit 1
+$UI tap "Сегодня"
+$UI dump swipe-today 0 "$(month_title 0)" || exit 1
+
 YESTERDAY=$(date -d yesterday +%F)
 $UI route "shift/new?date=$YESTERDAY&extra=false"
 $UI dump shift-new 1 || exit 1
