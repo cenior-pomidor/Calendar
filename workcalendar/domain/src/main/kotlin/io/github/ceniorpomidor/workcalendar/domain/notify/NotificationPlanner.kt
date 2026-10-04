@@ -90,9 +90,23 @@ class NotificationPlanner(
         payouts: List<PayoutInstance>,
         absencePayments: List<AbsencePayment>,
     ): PlannedNotification? {
+        if (key.startsWith(UNCONFIRMED_PREFIX)) return unconfirmedNow(key, now, shifts)
         val windowEnd = now.plusDays(1)
         val all = plan(now, windowEnd, shifts, payouts, absencePayments, emptySet())
         return all.firstOrNull { it.key == key && !it.triggerAt.isAfter(now.plusMinutes(5)) }
+    }
+
+    /** Reminder about unconfirmed shifts with the current count (also used for snoozed reminders). */
+    fun unconfirmedNow(key: String, now: LocalDateTime, shifts: List<Shift>): PlannedNotification? {
+        val count = unconfirmedCount(shifts, now)
+        if (count == 0) return null
+        return PlannedNotification(
+            key = key,
+            kind = NotificationKind.UNCONFIRMED,
+            triggerAt = now,
+            title = "Не отмечены отработанные часы",
+            text = "${Formats.shifts(count)} без подтверждённых часов. Заработок по ним не учитывается, пока часы не внесены.",
+        )
     }
 
     fun unconfirmedCount(shifts: List<Shift>, at: LocalDateTime): Int =
@@ -123,7 +137,7 @@ class NotificationPlanner(
         var day = now.toLocalDate()
         while (!day.isAfter(until.toLocalDate())) {
             val trigger = TimeMath.atMinute(day, settings.unconfirmedReminderMinute)
-            val key = "unconfirmed:$day"
+            val key = "$UNCONFIRMED_PREFIX$day"
             if (!trigger.isBefore(now) && !trigger.isAfter(until) && key !in delivered) {
                 // Shifts that ended at least an hour before the reminder (fresh ones get their own notification).
                 val count = shifts.count {
@@ -219,6 +233,7 @@ class NotificationPlanner(
 
     companion object {
         const val SHIFT_END_LOOKBACK_HOURS: Long = 24
+        const val UNCONFIRMED_PREFIX: String = "unconfirmed:"
 
         fun shiftKey(shift: Shift): String = "shift:${shift.id}:${shift.plannedEnd}"
     }

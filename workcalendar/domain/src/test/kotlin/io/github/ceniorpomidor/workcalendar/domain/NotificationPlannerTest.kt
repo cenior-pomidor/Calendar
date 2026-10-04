@@ -67,6 +67,10 @@ class NotificationPlannerTest {
         val daily = plan.single { it.kind == NotificationKind.UNCONFIRMED }
         assertEquals(dateTime("2026-10-05T20:00"), daily.triggerAt)
         assertEquals(1, planner.unconfirmedCount(listOf(s), now))
+        // A snoozed reminder fires later with the current count.
+        val snoozed = planner.find(daily.key, dateTime("2026-10-05T21:00"), listOf(s), emptyList(), emptyList())
+        assertEquals(NotificationKind.UNCONFIRMED, snoozed?.kind)
+        assertNull(planner.find(daily.key, dateTime("2026-10-05T21:00"), listOf(s.copy(status = ShiftStatus.CONFIRMED)), emptyList(), emptyList()))
     }
 
     @Test

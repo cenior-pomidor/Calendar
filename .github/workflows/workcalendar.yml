@@ -1,0 +1,58 @@
+name: Work Calendar app
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'ccr-**'
+    paths:
+      - 'workcalendar/**'
+      - 'core/**'
+      - 'data/**'
+      - 'compose/**'
+      - 'gradle/**'
+      - 'buildSrc/**'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/workcalendar.yml'
+  pull_request:
+    paths:
+      - 'workcalendar/**'
+      - 'gradle/**'
+      - '.github/workflows/workcalendar.yml'
+
+concurrency:
+  group: workcalendar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests (business logic)
+        run: ./gradlew :workcalendar:domain:test --stacktrace
+      - name: Build release APK
+        run: ./gradlew :workcalendar:app:assembleRelease --stacktrace
+      - name: Collect APK
+        run: |
+          mkdir -p dist
+          cp workcalendar/app/build/outputs/apk/release/app-release.apk "dist/WorkCalendar-${{ github.run_number }}.apk"
+          ls -la dist
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorkCalendar-apk
+          path: dist/*.apk
+          if-no-files-found: error
+      - name: Ktlint
+        continue-on-error: true
+        run: ./gradlew :workcalendar:domain:lintKotlin :workcalendar:app:lintKotlin
