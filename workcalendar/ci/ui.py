@@ -18,13 +18,30 @@ def adb(*args, check=False):
 
 
 def dump_xml():
-    for _ in range(3):
+    root = None
+    for _ in range(5):
         adb("shell", "uiautomator", "dump", "/sdcard/ui.xml")
         res = adb("shell", "cat", "/sdcard/ui.xml")
         if "<hierarchy" in res.stdout:
-            return ET.fromstring(res.stdout[res.stdout.index("<?xml") if "<?xml" in res.stdout else res.stdout.index("<hierarchy"):])
-        time.sleep(1)
-    return None
+            root = ET.fromstring(res.stdout[res.stdout.index("<?xml") if "<?xml" in res.stdout else res.stdout.index("<hierarchy"):])
+            if not dismiss_system_dialog(root):
+                return root
+        time.sleep(1.5)
+    return root
+
+
+def dismiss_system_dialog(root):
+    """Closes "<app> isn't responding" dialogs of other apps that a slow emulator shows over the app."""
+    if not any("isn't responding" in (n.get("text") or "") or "не отвечает" in (n.get("text") or "") for n in nodes(root)):
+        return False
+    for label in ("Wait", "Подождать", "Close app", "Закрыть приложение"):
+        node = find(root, label, exact=True)
+        if node is not None:
+            x, y = center(node)
+            adb("shell", "input", "tap", str(x), str(y))
+            print(f">> dismissed system dialog ({label})")
+            return True
+    return False
 
 
 def nodes(root):
