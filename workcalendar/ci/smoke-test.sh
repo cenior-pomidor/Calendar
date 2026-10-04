@@ -38,16 +38,21 @@ t = datetime.date.today()
 m = t.month - 1 + int(sys.argv[1])
 print(names[m % 12], t.year + m // 12)" "$1"
 }
-adb shell dumpsys window | grep -E "mCurrentFocus" | head -2
-# Frames during the first swipe: shown only if the swipe does not change the month.
-( for i in 1 2 3 4 5 6; do adb exec-out screencap -p > "smoke/swipe-frame-$i.png"; done ) &
-FRAMES=$!
-adb shell input swipe 950 1000 150 1000 250
-wait $FRAMES
+# `input swipe` waits until the app has handled each event: while the app is still busy after the
+# setup wizard (generating the schedule), a quick swipe can turn into a plain touch without moves.
+# Let it settle first and log how long the swipe command takes.
+sleep 4
+timed_swipe() {
+  local start end
+  start=$(date +%s%N)
+  adb shell input swipe "$@"
+  end=$(date +%s%N)
+  echo ">> swipe $* took $(( (end - start) / 1000000 )) ms"
+}
+timed_swipe 950 1000 150 1000 300
 if ! $UI dump swipe-fast 0 "$(month_title 1)"; then
-  for i in 1 2 3 4 5 6; do $UI frame "smoke/swipe-frame-$i.png" "swipe-frame-$i"; done
   echo "!! WARNING: the first swipe did not change the month; trying once more"
-  adb shell input swipe 950 1000 150 1000 250
+  timed_swipe 950 1000 150 1000 300
   $UI dump swipe-fast-retry 1 "$(month_title 1)" || exit 1
 fi
 # A slow drag over 60% of the width, slightly diagonal.
