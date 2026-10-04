@@ -66,8 +66,10 @@ object SchedulePresets {
         Preset("custom", "Свой цикл", "Произвольная последовательность рабочих и выходных дней"),
     )
 
+    /** Pattern for a preset; [startMinute] and [breakMinutes] apply to all presets, 24-hour presets ignore the duration. */
     fun create(id: String, anchorDate: LocalDate, startMinute: Int = 9 * 60, durationMinutes: Int = 9 * 60, breakMinutes: Int = 60): SchedulePattern {
-        val day = ShiftSpec(startMinute, durationMinutes, breakMinutes.coerceAtMost(durationMinutes - 1))
+        val day = ShiftSpec(startMinute, durationMinutes, breakMinutes.coerceIn(0, durationMinutes - 1))
+        val fullDay = ShiftSpec(startMinute, 24 * 60, breakMinutes.coerceIn(0, 24 * 60 - 1))
         return when (id) {
             "5x2" -> SchedulePattern.Weekly(
                 days = java.time.DayOfWeek.entries.filter { it.value <= 5 }.associateWith { day },
@@ -75,10 +77,15 @@ object SchedulePresets {
             )
             "2x2" -> SchedulePattern.Cycle(listOf(day, day, null, null), anchorDate)
             "3x3" -> SchedulePattern.Cycle(listOf(day, day, day, null, null, null), anchorDate)
-            "1x3" -> SchedulePattern.Cycle(listOf(ShiftSpec(8 * 60, 24 * 60, 120), null, null, null), anchorDate)
-            "1x2" -> SchedulePattern.Cycle(listOf(ShiftSpec(8 * 60, 24 * 60, 120), null, null), anchorDate)
+            "1x3" -> SchedulePattern.Cycle(listOf(fullDay, null, null, null), anchorDate)
+            "1x2" -> SchedulePattern.Cycle(listOf(fullDay, null, null), anchorDate)
             "day-night" -> SchedulePattern.Cycle(
-                listOf(ShiftSpec(8 * 60, 12 * 60, 60, "День"), ShiftSpec(20 * 60, 12 * 60, 60, "Ночь"), null, null),
+                listOf(
+                    ShiftSpec(startMinute, 12 * 60, breakMinutes.coerceIn(0, 12 * 60 - 1), "День"),
+                    ShiftSpec((startMinute + 12 * 60) % (24 * 60), 12 * 60, breakMinutes.coerceIn(0, 12 * 60 - 1), "Ночь"),
+                    null,
+                    null,
+                ),
                 anchorDate,
             )
             else -> SchedulePattern.Cycle(listOf(day, null), anchorDate)

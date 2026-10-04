@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateOf
 import androidx.fragment.app.FragmentActivity
 import io.github.ceniorpomidor.workcalendar.notifications.Notifications
+import io.github.ceniorpomidor.workcalendar.ui.lock.FinanceLockState
 import io.github.ceniorpomidor.workcalendar.ui.navigation.WorkCalendarRoot
 
 /**
@@ -27,6 +28,12 @@ class MainActivity : FragmentActivity() {
                 onRouteHandled = { pendingRoute.value = null },
             )
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Finance section is locked again when the app leaves the screen.
+        if (!isChangingConfigurations) FinanceLockState.lock()
     }
 
     override fun onNewIntent(intent: Intent) {
