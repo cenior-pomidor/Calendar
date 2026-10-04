@@ -102,6 +102,8 @@ def cmd_dump(name, inline="0", expect=None):
         sys.exit(1)
     if expect and not any(expect in t for t in lines):
         print(f"!! expected text not found on {name}: {expect}")
+        log = adb("logcat", "-d").stdout.splitlines()
+        print("\n".join(line for line in log if "WorkCalendar" in line or " E " in line)[-6000:])
         sys.exit(1)
 
 

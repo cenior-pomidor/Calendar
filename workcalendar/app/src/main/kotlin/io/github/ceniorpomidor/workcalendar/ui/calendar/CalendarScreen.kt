@@ -62,6 +62,7 @@ import io.github.ceniorpomidor.workcalendar.ui.components.money
 import io.github.ceniorpomidor.workcalendar.ui.theme.AppIcons
 import io.github.ceniorpomidor.workcalendar.ui.theme.AppTheme
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -118,7 +119,10 @@ fun CalendarScreen(
     LaunchedEffect(calendarState) {
         // A swipe must always end on a whole month, even if its animation was interrupted.
         snapshotFlow { calendarState.isScrollInProgress }.collect { scrolling ->
-            if (!scrolling && !calendarState.isAligned()) {
+            if (scrolling) return@collect
+            // A drag and the fling after it are separate scrolls: never step in between them.
+            delay(SETTLE_DELAY_MS)
+            if (!calendarState.isScrollInProgress && !calendarState.isAligned()) {
                 try {
                     calendarState.animateScrollToMonth(calendarState.mostVisibleMonth())
                 } catch (e: CancellationException) {
@@ -132,7 +136,7 @@ fun CalendarScreen(
         var previous: YearMonth? = null
         snapshotFlow { visibleMonth }.distinctUntilChanged().collectLatest { month ->
             // Data of neighbouring months is already loaded: reload only when the swipe has settled.
-            snapshotFlow { calendarState.isScrollInProgress }.first { !it }
+            calendarState.awaitSettled()
             vm.onMonthVisible(month)
             // The day panel follows the month shown by the calendar.
             if (previous != null && YearMonth.from(vm.selectedDate.value) != month) {
@@ -275,6 +279,17 @@ private val SUMMARY_ROW_HEIGHT = 64.dp
 
 /** Space kept for the day panel under the calendar in portrait. */
 private val MIN_PANEL_HEIGHT = 150.dp
+
+/** Pause after a scroll before the calendar counts as settled (a fling may follow a drag). */
+private const val SETTLE_DELAY_MS = 150L
+
+/** Suspends until the calendar has stopped scrolling, including the fling after a drag. */
+private suspend fun CalendarState.awaitSettled() {
+    do {
+        snapshotFlow { isScrollInProgress }.first { !it }
+        delay(SETTLE_DELAY_MS)
+    } while (isScrollInProgress)
+}
 
 /** The month that occupies the largest part of the calendar viewport. */
 private fun CalendarState.mostVisibleMonth(): YearMonth {
