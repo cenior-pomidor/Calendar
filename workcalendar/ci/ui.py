@@ -105,6 +105,18 @@ def screenshot(name, inline):
             print(f"=====END {name}=====")
 
 
+def cmd_frame(png, name):
+    """Prints a small inline copy of a screenshot taken by the test script."""
+    jpg = png[:-4] + ".jpg"
+    r = subprocess.run(["convert", png, "-resize", "270x", "-quality", "55", jpg], capture_output=True)
+    if r.returncode == 0 and os.path.exists(jpg):
+        data = base64.b64encode(open(jpg, "rb").read()).decode()
+        print(f"=====SCREENSHOT {name} {len(data)}=====")
+        for i in range(0, len(data), 4000):
+            print(data[i:i + 4000])
+        print(f"=====END {name}=====")
+
+
 def cmd_dump(name, inline="0", expect=None):
     time.sleep(1.5)
     root = dump_xml()
@@ -272,6 +284,7 @@ if __name__ == "__main__":
         "route": cmd_route,
         "back": cmd_back,
         "hide-keyboard": cmd_hide_keyboard,
+        "frame": cmd_frame,
         "set-time": cmd_set_time,
         "notifications": cmd_notifications,
         "notification-action": cmd_notification_action,
