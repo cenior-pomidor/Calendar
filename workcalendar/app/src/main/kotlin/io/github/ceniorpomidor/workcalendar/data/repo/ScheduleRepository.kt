@@ -145,7 +145,7 @@ class ScheduleRepository(
             }
         }
         val r = preview.request
-        val period = if (r.endDate != null) Formats.period(r.startDate, r.endDate!!) else "с ${Formats.date(r.startDate)}"
+        val period = if (r.endDate != null) Formats.period(r.startDate, r.endDate) else "с ${Formats.date(r.startDate)}"
         log.log(
             ChangeCategory.SCHEDULE,
             "График применён",

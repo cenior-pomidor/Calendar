@@ -114,7 +114,7 @@ fun ConfirmShiftScreen(container: AppContainer, shiftId: Long, onEdit: (Long) ->
                 actualEnd = if (useTimes) actualEnd else null,
                 actualBreakMinutes = if (useTimes) breakMinutes else null,
             ),
-            minutes!!,
+            minutes,
         )
     } else {
         null
@@ -211,7 +211,7 @@ fun ConfirmShiftScreen(container: AppContainer, shiftId: Long, onEdit: (Long) ->
                     Text("Ставка не задана — часы сохранятся, сумма будет рассчитана после указания ставки.", style = MaterialTheme.typography.bodySmall)
                 }
                 FilledTonalButton(onClick = { minutes?.let { save(it, useTimes) } }, enabled = valid, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (valid) "Сохранить ${Formats.hours(minutes!!.toLong())}" else "Сохранить")
+                    Text(if (valid) "Сохранить ${Formats.hours(minutes.toLong())}" else "Сохранить")
                 }
             }
             if (shift.status != ShiftStatus.MISSED) {

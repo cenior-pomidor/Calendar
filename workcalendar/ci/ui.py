@@ -124,9 +124,9 @@ def swipe_up():
     time.sleep(1)
 
 
-def cmd_tap(text, exact="0"):
+def cmd_tap(text, exact="0", scroll="1"):
     cmd_hide_keyboard()
-    for attempt in range(6):
+    for attempt in range(6 if scroll == "1" else 3):
         root = dump_xml()
         node = find(root, text, exact == "1") if root is not None else None
         if node is not None:
@@ -135,8 +135,95 @@ def cmd_tap(text, exact="0"):
             print(f">> tap '{text}' at {x},{y}")
             time.sleep(1.2)
             return
-        swipe_up()
+        if scroll == "1":
+            swipe_up()
+        else:
+            time.sleep(1.5)
     print(f"!! element not found: {text}")
+
+
+def device_zone():
+    return adb("shell", "getprop", "persist.sys.timezone").stdout.strip() or "UTC"
+
+
+def cmd_set_time(local_iso):
+    """Moves the emulator clock (needs adb root); the system then broadcasts TIME_SET."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    when = datetime.fromisoformat(local_iso).replace(tzinfo=ZoneInfo(device_zone()))
+    millis = int(when.timestamp() * 1000)
+    adb("shell", "settings", "put", "global", "auto_time", "0")
+    res = adb("shell", "cmd", "alarm", "set-time", str(millis))
+    out = (res.stdout + res.stderr).strip()
+    if res.returncode != 0 or "Exception" in out:
+        res = adb("shell", "date", f"@{millis // 1000}")
+        out += " | date: " + (res.stdout + res.stderr).strip()
+    print(f">> set time {local_iso} ({device_zone()}): {out}; device time now {adb('shell', 'date').stdout.strip()}")
+
+
+def notifications():
+    """Titles and texts of the app's notifications that are currently shown."""
+    out = adb("shell", "dumpsys", "notification", "--noredact").stdout
+    result, current = [], None
+    for line in out.splitlines():
+        s = line.strip()
+        if s.startswith("NotificationRecord("):
+            if current:
+                result.append(current)
+            current = {} if f"pkg={PKG}" in s else None
+            continue
+        if current is not None:
+            m = re.match(r"android\.(title|text|bigText)=\S+ \((.*)\)$", s)
+            if m and m.group(1) not in current:
+                current[m.group(1)] = m.group(2)
+    if current:
+        result.append(current)
+    unique = []
+    for n in result:
+        if n and n not in unique:
+            unique.append(n)
+    return unique
+
+
+def cmd_notifications(expect=None, timeout="30"):
+    """Prints the app's notifications; with [expect] waits until one of them contains the text."""
+    deadline = time.time() + int(timeout)
+    while True:
+        items = notifications()
+        found = expect is None or any(expect in v for n in items for v in n.values())
+        if found or time.time() > deadline:
+            break
+        time.sleep(1)
+    print("===== NOTIFICATIONS =====")
+    for n in items:
+        print(f"  {n.get('title', '')} | {n.get('bigText') or n.get('text', '')}")
+    if expect is not None:
+        print(("OK notification: " if found else "!! notification not found: ") + expect)
+        if not found:
+            sys.exit(2)
+
+
+def cmd_notification_action(action, title):
+    """Taps an action button of the app's notification in the expanded shade."""
+    for _ in range(4):
+        root = dump_xml()
+        node = find(root, action) if root is not None else None
+        if node is not None:
+            x, y = center(node)
+            adb("shell", "input", "tap", str(x), str(y))
+            print(f">> tap notification action '{action}' at {x},{y}")
+            time.sleep(1.5)
+            return
+        header = find(root, title) if root is not None else None
+        if header is not None:
+            # A collapsed notification is expanded by dragging it down.
+            x, y = center(header)
+            adb("shell", "input", "swipe", str(x), str(y), str(x), str(y + 600), "400")
+            print(">> expand notification")
+        time.sleep(1.5)
+    print(f"!! notification action not found: {action}")
+    sys.exit(3)
 
 
 def cmd_type(text):
@@ -164,4 +251,7 @@ if __name__ == "__main__":
         "route": cmd_route,
         "back": cmd_back,
         "hide-keyboard": cmd_hide_keyboard,
+        "set-time": cmd_set_time,
+        "notifications": cmd_notifications,
+        "notification-action": cmd_notification_action,
     }[command](*args)

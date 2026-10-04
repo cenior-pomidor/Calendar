@@ -70,6 +70,51 @@ $UI dump notifications 0 || exit 1
 $UI route "search"
 $UI dump search 0 || exit 1
 
+# ---- Notifications: shift end -> quick actions (needs adb root to move the clock) ----
+next_weekday() {
+  python3 -c "import datetime,sys
+d = datetime.date.fromisoformat(sys.argv[1]) + datetime.timedelta(days=1)
+while d.weekday() >= 5:
+    d += datetime.timedelta(days=1)
+print(d)" "$1"
+}
+echo "===== ALARMS ====="
+adb shell dumpsys alarm | grep -A2 "Alarm{.*$PKG" | grep -E "Alarm\{|origWhen=" | head -20
+adb root > /dev/null 2>&1 || true
+sleep 3
+adb wait-for-device
+TODAY=$(adb shell date +%F | tr -d '\r')
+D1=$(next_weekday "$TODAY")
+D2=$(next_weekday "$D1")
+adb shell input keyevent 3
+$UI set-time "${D1}T18:05:00"
+if [ "$(adb shell date +%F | tr -d '\r')" = "$D1" ]; then
+  # The shift of D1 (09:00-18:00) has just ended: the notification must appear by itself.
+  $UI notifications "Смена завершена" || exit 1
+  adb shell cmd statusbar expand-notifications
+  sleep 2
+  $UI dump shade-shift-end 1 || exit 1
+  $UI notification-action "Полностью" "Смена завершена" || exit 1
+  $UI notifications "Часы сохранены" 10 || exit 1
+  adb shell cmd statusbar collapse
+  # Next working day: enter the hours right in the notification.
+  $UI set-time "${D2}T18:05:00"
+  $UI notifications "Смена завершена" || exit 1
+  adb shell cmd statusbar expand-notifications
+  sleep 2
+  if $UI notification-action "Ввести часы" "Смена завершена"; then
+    $UI type "7,5"
+    $UI dump shade-reply 1 || exit 1
+    adb shell input keyevent 66
+    $UI notifications "7,5" 10 || echo "!! inline reply was not confirmed"
+  fi
+  adb shell cmd statusbar collapse
+  $UI route "day/$D2"
+  $UI dump day-after-reply 1 || exit 1
+else
+  echo "!! the emulator clock could not be changed, notification flow skipped"
+fi
+
 echo "===== LOGCAT (app) ====="
 adb logcat -d | grep -E "WorkCalendar|AndroidRuntime|FATAL" | tail -80
 if adb logcat -d -b crash | grep -q "FATAL EXCEPTION"; then
