@@ -74,6 +74,28 @@ class NotificationPlannerTest {
     }
 
     @Test
+    fun `daily reminder that fires much later than planned is skipped`() {
+        val monday = shift(10, "2026-10-05")
+        val tuesday = shift(11, "2026-10-06")
+        val key = NotificationPlanner.UNCONFIRMED_PREFIX + "2026-10-05"
+        // An hour late (e.g. delayed by the system) it is still shown.
+        assertNotNull(planner.findDue(key, dateTime("2026-10-05T21:00"), listOf(monday), emptyList(), emptyList(), snoozed = false))
+        // The clock was moved to the next evening: no stale reminder on top of the fresh shift notification.
+        val shifts = listOf(shift(10, "2026-10-05", status = ShiftStatus.CONFIRMED, worked = 480), tuesday)
+        assertNull(planner.findDue(key, dateTime("2026-10-06T18:05"), shifts, emptyList(), emptyList(), snoozed = false))
+        // A reminder snoozed by the user is shown whenever it fires.
+        assertNotNull(planner.findDue(key, dateTime("2026-10-06T23:00"), listOf(monday), emptyList(), emptyList(), snoozed = true))
+    }
+
+    @Test
+    fun `daily reminder does not count a shift that has just ended`() {
+        val evening = shift(12, "2026-10-05", start = "11:00", end = "19:30")
+        val key = NotificationPlanner.UNCONFIRMED_PREFIX + "2026-10-05"
+        assertNull(planner.findDue(key, dateTime("2026-10-05T20:00"), listOf(evening), emptyList(), emptyList(), snoozed = false))
+        assertNotNull(planner.find(key, dateTime("2026-10-05T20:31"), listOf(evening), emptyList(), emptyList()))
+    }
+
+    @Test
     fun `missed shift reminder is delivered late within a day`() {
         val now = dateTime("2026-10-06T07:00")
         val s = shift(10, "2026-10-05")

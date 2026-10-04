@@ -122,6 +122,7 @@ fun DayPanel(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
                 shape = RoundedCornerShape(14.dp),
                 onClick = { noteDialog = true },
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(Modifier.padding(12.dp)) {
                     Icon(AppIcons.Note, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -99,6 +99,7 @@ fun UnconfirmedScreen(container: AppContainer, onOpen: (Long) -> Unit, onBack: (
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                     shape = RoundedCornerShape(18.dp),
                     onClick = { onOpen(shift.id) },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(Formats.dayTitle(shift.date).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleSmall)

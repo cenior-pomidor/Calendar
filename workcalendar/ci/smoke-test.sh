@@ -60,9 +60,14 @@ $UI route "settings/rates"
 $UI dump rates 0 || exit 1
 $UI route "settings/payouts"
 $UI dump payouts 0 || exit 1
-$UI route "absence/new?type=VACATION&start=$(date -d '+20 days' +%F)"
+VACATION=$(date -d '+20 days' +%F)
+$UI route "absence/new?type=VACATION&start=$VACATION"
 sleep 2
 $UI dump absence 1 || exit 1
+$UI tap "Сохранить" 1
+sleep 2
+$UI route "day/$VACATION"
+$UI dump vacation-day 1 "Сумма" || exit 1
 $UI route "settings/backup"
 $UI dump backup 0 || exit 1
 $UI route "settings/notifications"

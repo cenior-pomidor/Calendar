@@ -120,7 +120,7 @@ jobs:
   release:
     name: Publish release
     needs: [build, smoke-test]
-    if: github.event_name == 'workflow_dispatch' && inputs.release
+    if: github.event_name == 'workflow_dispatch' && (inputs.release == true || inputs.release == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: write

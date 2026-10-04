@@ -3,6 +3,7 @@
 import base64
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -232,7 +233,8 @@ def cmd_type(text):
 
 
 def cmd_route(route):
-    adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity", "-a", "android.intent.action.VIEW", "--es", "route", route)
+    # The command line is run by the device shell: quote the route ("&" would end the command).
+    adb("shell", f"am start -n {PKG}/.MainActivity -a android.intent.action.VIEW --es route {shlex.quote(route)}")
     print(f">> route {route}")
     time.sleep(2)
 

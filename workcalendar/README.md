@@ -11,9 +11,9 @@ Android-приложение для личного планирования ра
 
 ## Установка
 
-1. Скачайте APK: [WorkCalendar-1.0.0.apk](https://github.com/cenior-pomidor/Calendar/releases/download/workcalendar-v1.0.0/WorkCalendar-1.0.0.apk)
-   (страница релиза — [Releases](https://github.com/cenior-pomidor/Calendar/releases/tag/workcalendar-v1.0.0);
-   сборки каждого коммита есть в артефактах на вкладке **Actions → Work Calendar app**).
+1. Скачайте `WorkCalendar-<версия>.apk` со страницы
+   [последнего релиза](https://github.com/cenior-pomidor/Calendar/releases/latest)
+   (сборки каждого коммита есть также в артефактах на вкладке **Actions → Work Calendar app**).
 2. Откройте файл на телефоне и разрешите установку из этого источника.
 3. При первом запуске разрешите уведомления.
 

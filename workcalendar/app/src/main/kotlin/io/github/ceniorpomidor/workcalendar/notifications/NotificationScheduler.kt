@@ -100,7 +100,7 @@ class NotificationScheduler(
             val state = db.miscDao().getNotificationState(key)
             if (!snooze && state?.deliveredAt != null) return@withLock false
             val inputs = loadInputs(now, now.plusDays(1))
-            val n = inputs.planner.find(key, now, inputs.shifts, inputs.payouts, inputs.absencePayments)
+            val n = inputs.planner.findDue(key, now, inputs.shifts, inputs.payouts, inputs.absencePayments, snoozed = snooze)
             if (n == null) {
                 if (state != null) db.miscDao().upsertNotificationState(state.copy(scheduled = false))
                 return@withLock false

@@ -96,9 +96,29 @@ class NotificationPlanner(
         return all.firstOrNull { it.key == key && !it.triggerAt.isAfter(now.plusMinutes(5)) }
     }
 
+    /**
+     * Like [find], for an alarm that has just fired. A daily reminder that comes much later than
+     * planned (the clock was moved forward, the alarm was held back) is dropped: the next one follows.
+     */
+    fun findDue(
+        key: String,
+        now: LocalDateTime,
+        shifts: List<Shift>,
+        payouts: List<PayoutInstance>,
+        absencePayments: List<AbsencePayment>,
+        snoozed: Boolean,
+    ): PlannedNotification? {
+        if (!snoozed && key.startsWith(UNCONFIRMED_PREFIX)) {
+            val day = runCatching { LocalDate.parse(key.removePrefix(UNCONFIRMED_PREFIX)) }.getOrNull()
+            val planned = day?.let { TimeMath.atMinute(it, settings.unconfirmedReminderMinute) }
+            if (planned != null && now.isAfter(planned.plusHours(UNCONFIRMED_MAX_DELAY_HOURS))) return null
+        }
+        return find(key, now, shifts, payouts, absencePayments)
+    }
+
     /** Reminder about unconfirmed shifts with the current count (also used for snoozed reminders). */
     fun unconfirmedNow(key: String, now: LocalDateTime, shifts: List<Shift>): PlannedNotification? {
-        val count = unconfirmedCount(shifts, now)
+        val count = remindableCount(shifts, now)
         if (count == 0) return null
         return PlannedNotification(
             key = key,
@@ -111,6 +131,14 @@ class NotificationPlanner(
 
     fun unconfirmedCount(shifts: List<Shift>, at: LocalDateTime): Int =
         shifts.count { it.status == ShiftStatus.PLANNED && !at.isBefore(it.plannedEnd.plusMinutes(settings.shiftEndDelayMinutes.toLong())) }
+
+    /** Unconfirmed shifts for the daily reminder; a shift that has just ended has its own notification. */
+    private fun remindableCount(shifts: List<Shift>, at: LocalDateTime): Int {
+        val fresh = if (settings.shiftEnd) FRESH_SHIFT_MINUTES else 0L
+        return shifts.count {
+            it.status == ShiftStatus.PLANNED && !at.isBefore(it.plannedEnd.plusMinutes(settings.shiftEndDelayMinutes.toLong() + fresh))
+        }
+    }
 
     private fun shiftEnd(now: LocalDateTime, until: LocalDateTime, shifts: List<Shift>, delivered: Set<String>): List<PlannedNotification> {
         val lookback = now.minusHours(SHIFT_END_LOOKBACK_HOURS)
@@ -139,11 +167,7 @@ class NotificationPlanner(
             val trigger = TimeMath.atMinute(day, settings.unconfirmedReminderMinute)
             val key = "$UNCONFIRMED_PREFIX$day"
             if (!trigger.isBefore(now) && !trigger.isAfter(until) && key !in delivered) {
-                // Shifts that ended at least an hour before the reminder (fresh ones get their own notification).
-                val count = shifts.count {
-                    it.status == ShiftStatus.PLANNED &&
-                        !trigger.isBefore(it.plannedEnd.plusMinutes(settings.shiftEndDelayMinutes.toLong() + 60))
-                }
+                val count = remindableCount(shifts, trigger)
                 if (count > 0) {
                     result += PlannedNotification(
                         key = key,
@@ -237,6 +261,12 @@ class NotificationPlanner(
     companion object {
         const val SHIFT_END_LOOKBACK_HOURS: Long = 24
         const val UNCONFIRMED_PREFIX: String = "unconfirmed:"
+
+        /** A daily reminder delivered later than this is skipped. */
+        const val UNCONFIRMED_MAX_DELAY_HOURS: Long = 3
+
+        /** Shifts that ended less than this ago are not counted by the daily reminder. */
+        const val FRESH_SHIFT_MINUTES: Long = 60
 
         fun shiftKey(shift: Shift): String = "shift:${shift.id}:${shift.plannedEnd}"
     }
