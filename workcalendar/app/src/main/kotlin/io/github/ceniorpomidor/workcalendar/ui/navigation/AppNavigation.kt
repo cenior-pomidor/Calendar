@@ -48,6 +48,7 @@ import io.github.ceniorpomidor.workcalendar.ui.lock.FinanceLockGate
 import io.github.ceniorpomidor.workcalendar.ui.onboarding.OnboardingScreen
 import io.github.ceniorpomidor.workcalendar.ui.search.SearchScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.AbsenceRulesScreen
+import io.github.ceniorpomidor.workcalendar.ui.settings.AlarmEditScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.AlarmScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.AppearanceScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.ApplyScheduleScreen
@@ -158,6 +159,8 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                         onOpenFinance = { navigateTopLevel(nav, "finance") },
                         onSearch = { nav.navigate("search") },
                         onSetupSchedule = { nav.navigate("settings/templates") },
+                        onEditAlarm = { nav.navigate("alarm/edit/$it") },
+                        onAddAlarm = { date, minute -> nav.navigate("alarm/edit/0?date=$date&minute=$minute") },
                     )
                 }
                 composable(
@@ -328,7 +331,35 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                 composable("settings/notifications") { NotificationSettingsScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
                 composable("settings/display") { AppearanceScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
                 composable("alarm") {
-                    AlarmScreen(container, settingsState.value ?: AppSettings(), onBack = backFor(nav, settingsState, "alarm"))
+                    AlarmScreen(
+                        container,
+                        settingsState.value ?: AppSettings(),
+                        onBack = backFor(nav, settingsState, "alarm"),
+                        onEdit = { nav.navigate("alarm/edit/$it") },
+                    )
+                }
+                composable(
+                    "alarm/edit/{id}?date={date}&minute={minute}",
+                    arguments = listOf(
+                        navArgument("id") { type = NavType.LongType },
+                        navArgument("date") {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        },
+                        navArgument("minute") {
+                            type = NavType.IntType
+                            defaultValue = -1
+                        },
+                    ),
+                ) { entry ->
+                    AlarmEditScreen(
+                        container = container,
+                        settings = settingsState.value ?: AppSettings(),
+                        alarmId = entry.arguments?.getLong("id")?.takeIf { it > 0 },
+                        date = entry.arguments?.getString("date").toDateOrNull(),
+                        minute = entry.arguments?.getInt("minute")?.takeIf { it >= 0 },
+                        onDone = { nav.popBackStack() },
+                    )
                 }
                 composable("settings/holidays") { HolidaysScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
                 composable("settings/backup") { BackupScreen(container, onBack = { nav.popBackStack() }) }

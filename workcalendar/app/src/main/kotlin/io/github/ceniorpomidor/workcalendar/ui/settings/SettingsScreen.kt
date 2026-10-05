@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import io.github.ceniorpomidor.workcalendar.AppContainer
 import io.github.ceniorpomidor.workcalendar.BuildConfig
 import io.github.ceniorpomidor.workcalendar.domain.absence.InsuranceExperience
+import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmTexts
 import io.github.ceniorpomidor.workcalendar.domain.model.AppSettings
 import io.github.ceniorpomidor.workcalendar.domain.util.Formats
 import io.github.ceniorpomidor.workcalendar.ui.components.ConfirmDialog
@@ -44,7 +45,7 @@ fun SettingsScreen(container: AppContainer, settings: AppSettings, onNavigate: (
                 SettingRow("Праздники и переносы", "Производственный календарь", AppIcons.Celebration, onClick = { onNavigate("settings/holidays") })
             }
             SectionCard(title = "Приложение") {
-                SettingRow("Будильник", alarmSummary(settings.alarm), AppIcons.Alarm, onClick = { onNavigate("alarm") })
+                SettingRow("Будильники", AlarmTexts.summary(settings.alarm), AppIcons.Alarm, onClick = { onNavigate("alarm") })
                 SettingRow("Уведомления", "Окончание смены, выплаты, напоминания", AppIcons.NotificationsActive, onClick = { onNavigate("settings/notifications") })
                 SettingRow("Оформление", "Тема, цветовая палитра, нижнее меню, вид календаря", AppIcons.Palette, onClick = { onNavigate("settings/display") })
                 SettingRow(

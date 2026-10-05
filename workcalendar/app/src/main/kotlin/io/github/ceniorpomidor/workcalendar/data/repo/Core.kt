@@ -81,7 +81,9 @@ class SettingsRepository(private val db: AppDatabase, private val changes: DataC
     private fun decode(entity: SettingsEntity?): AppSettings {
         if (entity == null) return AppSettings()
         return try {
-            Converters.json.decodeFromString(AppSettings.serializer(), entity.json)
+            val settings = Converters.json.decodeFromString(AppSettings.serializer(), entity.json)
+            // The single alarm of version 1.1.0 becomes an alarm of the list.
+            settings.copy(alarm = settings.alarm.migrated())
         } catch (e: Exception) {
             AppSettings()
         }

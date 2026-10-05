@@ -87,52 +87,6 @@ data class AppearanceSettings(
     val navLabels: NavLabels = NavLabels.ALWAYS,
 )
 
-/** How the time of the working day alarm is chosen. */
-@Serializable
-enum class AlarmTimeMode {
-    /** A fixed interval before the start of the first shift of the day. */
-    BEFORE_SHIFT,
-
-    /** The same time of day on every working day. */
-    FIXED_TIME,
-}
-
-/** Alarm of one day chosen by the user: replaces the working day alarm or turns it off. */
-@Serializable
-data class DayAlarm(
-    val date: LocalDate,
-    /** Minute of the day; null — no alarm on this day. */
-    val minute: Int?,
-)
-
-@Serializable
-data class AlarmSettings(
-    /** Alarm on every upcoming working day (a day with a planned shift). */
-    val workDays: Boolean = false,
-    val mode: AlarmTimeMode = AlarmTimeMode.BEFORE_SHIFT,
-    /** For [AlarmTimeMode.BEFORE_SHIFT]: minutes before the start of the first shift. */
-    val minutesBefore: Int = 90,
-    /** For [AlarmTimeMode.FIXED_TIME]: minute of the day. */
-    val fixedMinute: Int = 6 * 60 + 30,
-    /** Also on days with only extra shifts. */
-    val includeExtraShifts: Boolean = true,
-    val snoozeMinutes: Int = 10,
-    /** The alarm stops ringing by itself after this time, minutes. */
-    val ringMinutes: Int = 10,
-    /** Single days: alarms on chosen days and days without the working day alarm. */
-    val days: List<DayAlarm> = emptyList(),
-) {
-    fun dayAlarm(date: LocalDate): DayAlarm? = days.firstOrNull { it.date == date }
-
-    /** Sets the alarm of one day ([minute] null turns it off); old days are dropped. */
-    fun withDay(date: LocalDate, minute: Int?, today: LocalDate): AlarmSettings =
-        copy(days = (days.filter { it.date != date && !it.date.isBefore(today.minusDays(1)) } + DayAlarm(date, minute)).sortedBy { it.date })
-
-    /** Returns the day to the working day alarm (or no alarm if it is not a working day). */
-    fun withoutDay(date: LocalDate, today: LocalDate): AlarmSettings =
-        copy(days = days.filter { it.date != date && !it.date.isBefore(today.minusDays(1)) })
-}
-
 @Serializable
 enum class VacationPayMethod {
     /** Do not calculate; the amount is entered manually. */

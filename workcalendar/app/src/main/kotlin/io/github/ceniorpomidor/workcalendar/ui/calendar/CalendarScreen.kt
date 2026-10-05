@@ -53,6 +53,8 @@ import com.kizitonwose.calendar.core.daysOfWeek
 import io.github.ceniorpomidor.workcalendar.AppContainer
 import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmPlanner
 import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
+import io.github.ceniorpomidor.workcalendar.domain.model.AlarmItem
+import io.github.ceniorpomidor.workcalendar.domain.model.AlarmRepeat
 import io.github.ceniorpomidor.workcalendar.domain.model.AlarmSettings
 import io.github.ceniorpomidor.workcalendar.domain.model.Shift
 import io.github.ceniorpomidor.workcalendar.domain.pay.PeriodSummary
@@ -90,6 +92,8 @@ fun CalendarScreen(
     onOpenFinance: () -> Unit,
     onSearch: () -> Unit,
     onSetupSchedule: () -> Unit,
+    onEditAlarm: (Long) -> Unit,
+    onAddAlarm: (LocalDate, Int) -> Unit,
 ) {
     val vm: CalendarViewModel = viewModel { CalendarViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -148,7 +152,11 @@ fun CalendarScreen(
 
     // The selection stays when months are swiped and may be outside the loaded months.
     val dayInfo = state.days[selected] ?: selectedDay?.takeIf { it.date == selected }
-    val dayAlarm = if (selected.isBefore(today)) null else dayAlarmUi(container, state.settings.alarm, selected, dayInfo, today, scope, snackbar)
+    val dayAlarms = if (selected.isBefore(today)) {
+        null
+    } else {
+        dayAlarmsUi(container, state.settings.alarm, selected, dayInfo, today, scope, snackbar, onEditAlarm, onAddAlarm)
+    }
 
     val actions = ShiftActions(
         confirm = { onConfirmShift(it.id) },
@@ -244,7 +252,7 @@ fun CalendarScreen(
                 onAddAbsence = { type -> onNewAbsence(type, selected) },
                 onOpenAbsence = { onOpenAbsence(it.id) },
                 onSaveNote = { text -> scope.launchSafely(snackbar) { vm.saveNote(selected, text) } },
-                alarm = dayAlarm,
+                alarms = dayAlarms,
             )
             Spacer(Modifier.height(16.dp))
         }
@@ -279,8 +287,8 @@ fun CalendarScreen(
     if (legend) LegendDialog { legend = false }
 }
 
-/** Alarm of the selected day: the working day alarm and the change made for this day only. */
-private fun dayAlarmUi(
+/** Alarms of the selected day; switching one off here affects this day only. */
+private fun dayAlarmsUi(
     container: AppContainer,
     settings: AlarmSettings,
     date: LocalDate,
@@ -288,23 +296,29 @@ private fun dayAlarmUi(
     today: LocalDate,
     scope: CoroutineScope,
     snackbar: SnackbarHostState,
-): DayAlarmUi {
+    onEdit: (Long) -> Unit,
+    onAdd: (LocalDate, Int) -> Unit,
+): DayAlarmsUi {
     val shifts = info?.shifts.orEmpty()
-    val regular = AlarmPlanner.regular(settings, date, shifts)
-    fun save(success: String, transform: (AlarmSettings) -> AlarmSettings) = scope.launchSafely(snackbar, success = success) {
-        container.settings.update { it.copy(alarm = transform(it.alarm)) }
-    }
     val day = Formats.shortDate(date)
-    // For a day with a shift the time is offered as if the alarm were on for all working days.
-    val suggested = AlarmPlanner.regular(settings.copy(workDays = true, includeExtraShifts = true), date, shifts)?.at?.takeIf { it.toLocalDate() == date }
-    return DayAlarmUi(
-        effective = AlarmPlanner.forDay(settings, date, shifts),
-        regular = regular,
-        changed = settings.dayAlarm(date) != null,
+    // Before the shift of the day, as a working day alarm would ring; a day without shifts — in the morning.
+    val suggested = AlarmPlanner.workShift(date, shifts)?.plannedStart
+        ?.minusMinutes(AlarmItem.DEFAULT_MINUTES_BEFORE.toLong())
+        ?.takeIf { it.toLocalDate() == date }
+    return DayAlarmsUi(
+        alarms = AlarmPlanner.forDay(settings, date, shifts),
         suggestedMinute = suggested?.let { TimeMath.minuteOfDay(it.toLocalTime()) } ?: DEFAULT_ALARM_MINUTE,
-        onSet = { minute -> save("Будильник на $day в ${Formats.time(TimeMath.timeOfMinute(minute))}") { it.withDay(date, minute, today) } },
-        onOff = { save("Будильник на $day выключен") { if (regular != null) it.withDay(date, null, today) else it.withoutDay(date, today) } },
-        onReset = { save("Будильник на $day — как во все рабочие дни") { it.withoutDay(date, today) } },
+        onToggle = { alarm, on ->
+            val item = alarm.ring.alarm
+            scope.launchSafely(snackbar, success = if (on) "Будильник на $day включён" else "Будильник на $day выключен") {
+                container.settings.update { s ->
+                    val updated = if (item.repeat == AlarmRepeat.ONCE) s.alarm.setEnabled(item.id, on) else s.alarm.skip(item.id, date, !on)
+                    s.copy(alarm = updated.cleaned(today))
+                }
+            }
+        },
+        onEdit = onEdit,
+        onAdd = { minute -> onAdd(date, minute) },
     )
 }
 

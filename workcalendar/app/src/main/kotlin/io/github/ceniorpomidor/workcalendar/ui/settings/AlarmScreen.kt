@@ -4,19 +4,27 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.AlarmClock
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,44 +36,35 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import io.github.ceniorpomidor.workcalendar.AppContainer
-import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmPlanner
+import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmTexts
 import io.github.ceniorpomidor.workcalendar.domain.alarm.PlannedAlarm
+import io.github.ceniorpomidor.workcalendar.domain.model.AlarmItem
+import io.github.ceniorpomidor.workcalendar.domain.model.AlarmRepeat
 import io.github.ceniorpomidor.workcalendar.domain.model.AlarmSettings
-import io.github.ceniorpomidor.workcalendar.domain.model.AlarmTimeMode
 import io.github.ceniorpomidor.workcalendar.domain.model.AppSettings
-import io.github.ceniorpomidor.workcalendar.domain.time.TimeMath
 import io.github.ceniorpomidor.workcalendar.domain.util.Formats
 import io.github.ceniorpomidor.workcalendar.notifications.Notifications
 import io.github.ceniorpomidor.workcalendar.ui.components.Banner
 import io.github.ceniorpomidor.workcalendar.ui.components.BannerKind
+import io.github.ceniorpomidor.workcalendar.ui.components.EmptyState
 import io.github.ceniorpomidor.workcalendar.ui.components.LocalSnackbar
 import io.github.ceniorpomidor.workcalendar.ui.components.ScrollColumn
 import io.github.ceniorpomidor.workcalendar.ui.components.SectionCard
 import io.github.ceniorpomidor.workcalendar.ui.components.SettingRow
 import io.github.ceniorpomidor.workcalendar.ui.components.SubScreen
-import io.github.ceniorpomidor.workcalendar.ui.components.SwitchRow
-import io.github.ceniorpomidor.workcalendar.ui.components.TimeField
 import io.github.ceniorpomidor.workcalendar.ui.components.launchSafely
 import io.github.ceniorpomidor.workcalendar.ui.theme.AppIcons
 
-/** One line about the alarm for the settings list. */
-fun alarmSummary(alarm: AlarmSettings): String {
-    val singles = alarm.days.count { it.minute != null }
-    val base = when {
-        !alarm.workDays -> "Выключен"
-        alarm.mode == AlarmTimeMode.BEFORE_SHIFT -> "В рабочие дни за ${Formats.hoursMinutes(alarm.minutesBefore.toLong())} до смены"
-        else -> "В рабочие дни в ${Formats.time(TimeMath.timeOfMinute(alarm.fixedMinute))}"
-    }
-    return if (singles > 0 && !alarm.workDays) "Только в выбранные дни" else base
-}
-
+/** List of the app's alarms, the nearest rings and the ring settings. */
 @Composable
-fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> Unit)?) {
+fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> Unit)?, onEdit: (Long) -> Unit) {
     val update = rememberSettingsUpdater(container)
     val context = LocalContext.current
     val snackbar = LocalSnackbar.current
@@ -80,13 +79,26 @@ fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> U
     val today = container.clock.today()
     val upcoming by produceState(emptyList<PlannedAlarm>(), alarm, refresh) { value = container.wakeAlarms.upcoming(UPCOMING_COUNT) }
     val snoozedUntil = remember(refresh, upcoming) { container.wakeAlarms.snoozedUntil() }
-    fun change(transform: (AlarmSettings) -> AlarmSettings) = update { it.copy(alarm = transform(it.alarm)) }
+    fun change(success: String? = null, transform: (AlarmSettings) -> AlarmSettings) =
+        scope.launchSafely(snackbar, success = success) { container.settings.update { it.copy(alarm = transform(it.alarm).cleaned(today)) } }
 
-    SubScreen(title = "Будильник", onBack = onBack) { padding ->
+    SubScreen(
+        title = "Будильники",
+        onBack = onBack,
+        actions = {
+            // The clock app keeps its own alarms: open it from here.
+            IconButton(onClick = { runCatching { context.startActivity(Intent(AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }) {
+                Icon(AppIcons.Schedule, contentDescription = "Будильники «Часов»")
+            }
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(onClick = { onEdit(0) }, icon = { Icon(AppIcons.AlarmAdd, contentDescription = null) }, text = { Text("Добавить") })
+        },
+    ) { padding ->
         ScrollColumn(padding) {
             if (!canPost) {
                 Banner(
-                    "Уведомления запрещены — будильник не сможет зазвонить.",
+                    "Уведомления запрещены — будильники не смогут зазвонить.",
                     BannerKind.ERROR,
                     action = {
                         TextButton(onClick = {
@@ -141,72 +153,41 @@ fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> U
                     },
                 )
             }
-            SectionCard(title = "Рабочие дни", icon = AppIcons.Alarm) {
-                SwitchRow("Будильник во все рабочие дни", "Звонит перед каждой сменой по графику", alarm.workDays) { v -> change { it.copy(workDays = v) } }
-                if (alarm.workDays) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = alarm.mode == AlarmTimeMode.BEFORE_SHIFT,
-                            onClick = { change { it.copy(mode = AlarmTimeMode.BEFORE_SHIFT) } },
-                            label = { Text("До начала смены") },
-                        )
-                        FilterChip(
-                            selected = alarm.mode == AlarmTimeMode.FIXED_TIME,
-                            onClick = { change { it.copy(mode = AlarmTimeMode.FIXED_TIME) } },
-                            label = { Text("В одно время") },
-                        )
-                    }
-                    if (alarm.mode == AlarmTimeMode.BEFORE_SHIFT) {
-                        TimeField(
-                            "За сколько до начала смены (ч:мин)",
-                            alarm.minutesBefore,
-                            { m -> change { it.copy(minutesBefore = m.coerceIn(0, MAX_BEFORE_MINUTES)) } },
-                            supportingText = "Сейчас: за ${Formats.hoursMinutes(alarm.minutesBefore.toLong())}. Для ранних смен будильник может зазвонить накануне вечером",
-                        )
-                    } else {
-                        TimeField("Время будильника", alarm.fixedMinute, { m -> change { it.copy(fixedMinute = m) } }, supportingText = "В день смены, когда бы она ни начиналась")
-                    }
-                    SwitchRow("И в дни доп. смен", "Смены, добавленные вручную", alarm.includeExtraShifts) { v -> change { it.copy(includeExtraShifts = v) } }
-                }
-                Text(
-                    "Будильник на один день: выберите день в календаре и включите «Будильник» в панели дня. Там же его можно выключить или сдвинуть только на этот день.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            SectionCard(title = "Ближайшие будильники", icon = AppIcons.Event) {
-                if (upcoming.isEmpty()) {
-                    Text(
-                        if (alarm.workDays) "В ближайшие два месяца рабочих дней нет" else "Будильник не заведён",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                for (a in upcoming) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("${Formats.time(a.at)} · ${Formats.dayTitle(a.at.toLocalDate())}", style = MaterialTheme.typography.bodyLarge)
-                            Text(a.description(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "Будильники календаря звонят сами и не меняют будильники приложения «Часы». Будильник на один день можно завести и в панели дня на календаре.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val items = alarm.items.filter { it.repeat != AlarmRepeat.ONCE || it.date?.isBefore(today) != true }
+            if (items.isEmpty()) {
+                EmptyState(AppIcons.Alarm, "Будильников нет", "Например, будильник перед каждой сменой по графику") {
+                    Button(onClick = {
+                        change("Будильник заведён") {
+                            it.save(AlarmItem(repeat = AlarmRepeat.WORK_DAYS, minutesBefore = AlarmItem.DEFAULT_MINUTES_BEFORE))
                         }
-                        IconButton(onClick = {
-                            scope.launchSafely(snackbar, success = "Будильник на ${Formats.shortDate(a.date)} выключен") {
-                                container.settings.update { s ->
-                                    // A working day is switched off; an alarm set for a single day is removed.
-                                    val workDay = AlarmPlanner.regular(s.alarm, a.date, listOfNotNull(a.shift)) != null
-                                    s.copy(alarm = if (workDay) s.alarm.withDay(a.date, null, today) else s.alarm.withoutDay(a.date, today))
-                                }
-                            }
-                        }) { Icon(AppIcons.AlarmOff, contentDescription = "Не будить в этот день") }
+                    }) { Text("Перед каждой сменой") }
+                }
+            } else {
+                SectionCard(title = "Будильники", icon = AppIcons.Alarm) {
+                    for (item in items.sortedWith(compareBy({ it.repeat }, { it.minutesBefore == null }, { it.minutesBefore }, { it.date }, { it.minute }))) {
+                        AlarmItemRow(item, onClick = { onEdit(item.id) }, onEnabled = { on -> change { it.setEnabled(item.id, on) } })
                     }
                 }
             }
-            val offDays = alarm.days.filter { it.minute == null && !it.date.isBefore(today) }
-            if (offDays.isNotEmpty()) {
-                SectionCard(title = "Выключен в дни", icon = AppIcons.AlarmOff) {
-                    for (day in offDays) {
+            if (upcoming.isNotEmpty()) {
+                SectionCard(title = "Ближайшие звонки", icon = AppIcons.Event) {
+                    for (ring in upcoming) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(Formats.dayTitle(day.date).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                            TextButton(onClick = { change { it.withoutDay(day.date, today) } }) { Text("Вернуть") }
+                            Column(Modifier.weight(1f)) {
+                                Text("${Formats.time(ring.at)} · ${Formats.dayTitle(ring.at.toLocalDate())}", style = MaterialTheme.typography.bodyLarge)
+                                Text(ring.description(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            IconButton(onClick = {
+                                change("Будильник на ${Formats.shortDate(ring.date)} выключен") { s ->
+                                    // A one-time alarm is removed, a repeating one skips this day.
+                                    if (ring.alarm.repeat == AlarmRepeat.ONCE) s.remove(ring.alarm.id) else s.skip(ring.alarm.id, ring.date, true)
+                                }
+                            }) { Icon(AppIcons.AlarmOff, contentDescription = "Не будить в этот день") }
                         }
                     }
                 }
@@ -215,13 +196,13 @@ fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> U
                 Text("Отложить на", style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(5, 10, 15, 20, 30).forEach { m ->
-                        FilterChip(selected = alarm.snoozeMinutes == m, onClick = { change { it.copy(snoozeMinutes = m) } }, label = { Text("$m мин") })
+                        FilterChip(selected = alarm.snoozeMinutes == m, onClick = { update { it.copy(alarm = it.alarm.copy(snoozeMinutes = m)) } }, label = { Text("$m мин") })
                     }
                 }
                 Text("Звонит не дольше", style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(1, 5, 10, 15, 30).forEach { m ->
-                        FilterChip(selected = alarm.ringMinutes == m, onClick = { change { it.copy(ringMinutes = m) } }, label = { Text("$m мин") })
+                        FilterChip(selected = alarm.ringMinutes == m, onClick = { update { it.copy(alarm = it.alarm.copy(ringMinutes = m)) } }, label = { Text("$m мин") })
                     }
                 }
                 SettingRow(
@@ -242,11 +223,34 @@ fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> U
                     Text("Проверить будильник")
                 }
             }
+            Spacer(Modifier.padding(bottom = 72.dp))
         }
     }
 }
 
-private const val UPCOMING_COUNT = 10
+@Composable
+private fun AlarmItemRow(item: AlarmItem, onClick: () -> Unit, onEnabled: (Boolean) -> Unit) {
+    val color = if (item.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                AlarmTexts.time(item),
+                style = if (item.beforeShift) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = color,
+            )
+            val details = listOfNotNull(AlarmTexts.repeat(item), item.label.trim().ifBlank { null }).joinToString(" · ")
+            Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = item.enabled, onCheckedChange = onEnabled)
+    }
+}
 
-/** The alarm can ring at most 12 hours before the shift. */
-private const val MAX_BEFORE_MINUTES = 12 * 60
+private const val UPCOMING_COUNT = 10

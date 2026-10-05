@@ -16,6 +16,7 @@ import io.github.ceniorpomidor.workcalendar.data.repo.AppClock
 import io.github.ceniorpomidor.workcalendar.data.repo.SettingsRepository
 import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmPlanner
 import io.github.ceniorpomidor.workcalendar.domain.alarm.PlannedAlarm
+import io.github.ceniorpomidor.workcalendar.domain.model.AlarmRepeat
 import io.github.ceniorpomidor.workcalendar.domain.model.Shift
 import io.github.ceniorpomidor.workcalendar.domain.util.Formats
 import io.github.ceniorpomidor.workcalendar.ui.alarm.WakeAlarmActivity
@@ -52,10 +53,12 @@ data class RingingAlarm(
 }
 
 /**
- * Wake-up alarms. Only the nearest alarm (or the snoozed one) is set in AlarmManager, as an
- * alarm clock: it is exact, fires in Doze and is shown in the status bar and on the lock screen.
- * After it fires the next one is set. The alarm rings with an insistent notification on the
- * alarm sound channel that opens [WakeAlarmActivity] over the lock screen.
+ * Wake-up alarms of the app. Only the nearest ring (or the snoozed one) is set in AlarmManager,
+ * as an exact alarm that fires in Doze; after it fires the next one is set. It is deliberately
+ * not an "alarm clock" (setAlarmClock): the system shows only the alarms of the clock app in the
+ * status bar, on the lock screen and in the quick settings tile. The alarm rings with an
+ * insistent notification on the alarm sound channel that opens [WakeAlarmActivity] over the lock
+ * screen.
  */
 class WakeAlarmScheduler(
     private val context: Context,
@@ -99,7 +102,7 @@ class WakeAlarmScheduler(
         val snoozeAt = snoozedUntil()?.takeIf { it.isAfter(now) }
         when {
             snoozeAt != null && (next == null || !next.at.isBefore(snoozeAt)) -> set(snoozeAt, key = null, text = prefs.getString(KEY_SNOOZE_TEXT, null).orEmpty(), snooze = true)
-            next != null -> set(next.at, key = next.key, text = next.description(), snooze = false)
+            next != null -> set(next.at, key = next.key, text = next.description(), snooze = false, alarmId = next.alarm.id)
             else -> alarmManager?.cancel(firePendingIntent(null))
         }
     }
@@ -111,6 +114,14 @@ class WakeAlarmScheduler(
         val text = intent.getStringExtra(EXTRA_TEXT).orEmpty()
         if (intent.getBooleanExtra(EXTRA_SNOOZE, false)) clearSnooze()
         if (key != null) prefs.edit().putString(KEY_LAST, key).apply()
+        // A one-time alarm has done its job.
+        val alarmId = intent.getLongExtra(EXTRA_ALARM_ID, 0L)
+        if (alarmId != 0L) {
+            settings.update { s ->
+                val item = s.alarm.item(alarmId)
+                if (item?.repeat == AlarmRepeat.ONCE) s.copy(alarm = s.alarm.remove(alarmId).cleaned(clock.today())) else s
+            }
+        }
         val now = clock.now()
         if (at == null || !at.plusMinutes(LATE_LIMIT_MINUTES).isBefore(now)) {
             val alarm = settings.get().alarm
@@ -169,7 +180,7 @@ class WakeAlarmScheduler(
         Notifications.cancel(context, KEY_SNOOZED)
     }
 
-    private fun set(at: LocalDateTime, key: String?, text: String, snooze: Boolean) {
+    private fun set(at: LocalDateTime, key: String?, text: String, snooze: Boolean, alarmId: Long = 0L) {
         val manager = alarmManager ?: return
         val millis = at.atZone(clock.zone()).toInstant().toEpochMilli()
         val operation = firePendingIntent(
@@ -178,10 +189,12 @@ class WakeAlarmScheduler(
                 .putExtra(EXTRA_AT, at.toString())
                 .putExtra(EXTRA_KEY, key)
                 .putExtra(EXTRA_TEXT, text)
-                .putExtra(EXTRA_SNOOZE, snooze),
+                .putExtra(EXTRA_SNOOZE, snooze)
+                .putExtra(EXTRA_ALARM_ID, alarmId),
         )
+        // The same PendingIntent replaces the previous ring, including an alarm clock set by version 1.1.0.
         try {
-            manager.setAlarmClock(AlarmManager.AlarmClockInfo(millis, Notifications.openAppIntent(context, "alarm", REQUEST_SHOW)), operation)
+            manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, operation)
         } catch (e: SecurityException) {
             // Exact alarms are not allowed: the alarm may be a few minutes late.
             manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, operation)
@@ -253,6 +266,7 @@ class WakeAlarmScheduler(
         private const val EXTRA_KEY = "key"
         private const val EXTRA_TEXT = "text"
         private const val EXTRA_SNOOZE = "snooze"
+        private const val EXTRA_ALARM_ID = "alarmId"
 
         private const val REQUEST_FIRE = 7001
         private const val REQUEST_SHOW = 7002

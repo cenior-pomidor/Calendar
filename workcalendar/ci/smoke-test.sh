@@ -127,23 +127,27 @@ $UI dump appearance-after 0 || exit 1
 $UI route "calendar"
 $UI dump calendar-green 1 "=Будильник" || exit 1
 
-# ---- Alarm: every working day, one more on a day off, test ring ----
+# ---- Alarms: before every shift, one more at 06:30 on working days, one on a day off, test ring ----
 $UI tap "Будильник" 1
-$UI dump alarm 0 "Будильник во все рабочие дни" || exit 1
-$UI tap "Будильник во все рабочие дни" 1
+$UI dump alarm 0 "Будильников нет" || exit 1
+$UI tap "Перед каждой сменой" 1
 sleep 2
-$UI show "Ближайшие будильники"
-$UI dump alarm-on 1 "Ближайшие будильники" "07:30" || exit 1
+$UI tap "Добавить" 1
+$UI dump alarm-new 0 "Новый будильник" || exit 1
+$UI tap "Сохранить" 1
+sleep 2
+$UI show "Ближайшие звонки"
+$UI dump alarm-on 1 "Ближайшие звонки" "06:30 ·" "07:30 ·" || exit 1
 SATURDAY=$(python3 -c "import datetime
 d = datetime.date.today() + datetime.timedelta(days=1)
 while d.weekday() != 5:
     d += datetime.timedelta(days=1)
 print(d)")
 $UI route "day/$SATURDAY"
-$UI show "Включите, чтобы разбудить в этот день"
-$UI dump day-no-alarm 0 "Включите, чтобы разбудить в этот день" || exit 1
-$UI tap "Включите, чтобы разбудить в этот день"
-$UI tap "Готово" 1
+$UI show "Будильник на этот день"
+$UI tap "Будильник на этот день"
+$UI dump alarm-day-new 0 "Новый будильник" || exit 1
+$UI tap "Сохранить" 1
 sleep 4
 $UI show "Только в этот день"
 $UI dump day-alarm 1 "Будильник 07:00" "Только в этот день" || exit 1
@@ -153,8 +157,8 @@ $UI wait alarm-test "Отложить на 10 мин" 30 || exit 1
 $UI notifications "Проверка будильника" 10 || exit 1
 $UI tap "Выключить" 1
 sleep 2
-$UI show "Ближайшие будильники"
-$UI dump alarm-after-test 0 "Ближайшие будильники" || exit 1
+$UI show "Ближайшие звонки"
+$UI dump alarm-after-test 0 "Ближайшие звонки" || exit 1
 
 # ---- Notifications: shift end -> quick actions (needs adb root to move the clock) ----
 next_weekday() {
@@ -198,24 +202,30 @@ if [ "$(adb shell date +%F | tr -d '\r')" = "$D1" ]; then
   $UI route "day/$D2"
   $UI dump day-after-reply 1 || exit 1
 
-  # ---- The alarm of the next working day rings by itself over the lock screen ----
+  # ---- Both alarms of the next working day ring by themselves over the lock screen ----
   D3=$(next_weekday "$D2")
   adb shell appops set $PKG USE_FULL_SCREEN_INTENT allow || true
   adb shell input keyevent 223
+  $UI set-time "${D3}T06:29:30"
+  $UI wait alarm-ring-first "Будильник 06:30" 90 || exit 1
+  $UI tap "Выключить" 1
+  adb shell input keyevent 223
   $UI set-time "${D3}T07:29:30"
-  if $UI wait alarm-ring "Отложить на 10 мин" 90; then
-    $UI tap "Отложить на 10 мин" 1
-    $UI notifications "Будильник отложен до 07:4" 15 || exit 1
-    adb shell input keyevent 223
-    $UI set-time "${D3}T07:39:30"
-    $UI wait alarm-snoozed-ring "Будильник 07:4" 150 || exit 1
-    $UI tap "Выключить" 1
-  else
-    echo "!! WARNING: the alarm screen did not open over the lock screen"
-    $UI notifications "Будильник 07:30" 5 || exit 1
-  fi
+  $UI wait alarm-ring "Будильник 07:30" 90 || exit 1
+  $UI tap "Отложить на 10 мин" 1
+  $UI notifications "Будильник отложен до 07:4" 15 || exit 1
+  adb shell input keyevent 223
+  $UI set-time "${D3}T07:39:30"
+  $UI wait alarm-snoozed-ring "Будильник 07:4" 150 || exit 1
+  $UI tap "Выключить" 1
+  # The app's alarms are not system alarm clocks: the clock app keeps the status bar icon,
+  # the lock screen and the quick settings tile (the emulator has no clock alarms).
   echo "===== NEXT ALARM CLOCK ====="
   adb shell dumpsys alarm | grep -i -A3 "next alarm clock" | head -12
+  if adb shell dumpsys alarm | grep -A2 -i "next alarm clock information" | grep -q "user:0"; then
+    echo "!! the app has set a system alarm clock"
+    exit 1
+  fi
 else
   echo "!! the emulator clock could not be changed, notification flow skipped"
 fi
