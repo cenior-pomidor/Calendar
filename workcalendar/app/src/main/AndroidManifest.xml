@@ -11,6 +11,9 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Wake-up alarm: shown over the lock screen, vibrates. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".WorkCalendarApp"
@@ -36,8 +39,21 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.alarm.WakeAlarmActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:turnScreenOn="true" />
+
         <receiver
             android:name=".notifications.AlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".notifications.WakeAlarmReceiver"
             android:exported="false" />
 
         <receiver

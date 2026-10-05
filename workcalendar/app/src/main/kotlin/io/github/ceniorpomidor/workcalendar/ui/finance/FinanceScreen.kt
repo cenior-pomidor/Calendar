@@ -67,6 +67,7 @@ fun FinanceScreen(
     onOpenUnconfirmed: () -> Unit,
     onRates: () -> Unit,
     onPayoutRules: () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val vm: FinanceViewModel = viewModel { FinanceViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -75,7 +76,7 @@ fun FinanceScreen(
 
     SubScreen(
         title = "Финансы",
-        onBack = null,
+        onBack = onBack,
         actions = {
             IconButton(onClick = onStats) { Icon(AppIcons.BarChart, contentDescription = "Статистика") }
             IconButton(onClick = onHistory) { Icon(AppIcons.Receipt, contentDescription = "История") }

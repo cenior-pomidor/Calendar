@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.flow
 
 /** Shifts that have ended but have no hours; quick confirmation one by one or all at once. */
 @Composable
-fun UnconfirmedScreen(container: AppContainer, onOpen: (Long) -> Unit, onBack: () -> Unit) {
+fun UnconfirmedScreen(container: AppContainer, onOpen: (Long) -> Unit, onBack: (() -> Unit)?) {
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
     val flow = remember {

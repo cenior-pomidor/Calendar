@@ -74,7 +74,7 @@ private data class HistoryEntry(
 @Composable
 fun HistoryScreen(
     container: AppContainer,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onShift: (Long) -> Unit,
     onPayment: (Long) -> Unit,
     onAccrual: (Long) -> Unit,

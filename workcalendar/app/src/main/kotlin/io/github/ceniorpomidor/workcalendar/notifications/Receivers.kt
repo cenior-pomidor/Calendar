@@ -122,7 +122,28 @@ class SystemEventsReceiver : BroadcastReceiver() {
         runAsync {
             container.schedule.ensureHorizon()
             container.notifications.reschedule()
+            container.wakeAlarms.reschedule()
         }
         MaintenanceWorker.schedule(context)
+    }
+}
+
+/** Wake-up alarm: the alarm time has come, or a button of the alarm notification was pressed. */
+class WakeAlarmReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val alarms = context.appContainer.wakeAlarms
+        when (intent.action) {
+            ACTION_FIRE -> runAsync { alarms.onFired(intent) }
+            ACTION_SNOOZE -> runAsync { alarms.snooze() }
+            ACTION_DISMISS -> runAsync { alarms.dismiss() }
+            ACTION_CANCEL_SNOOZE -> runAsync { alarms.cancelSnooze() }
+        }
+    }
+
+    companion object {
+        const val ACTION_FIRE = "io.github.ceniorpomidor.workcalendar.WAKE_ALARM"
+        const val ACTION_SNOOZE = "io.github.ceniorpomidor.workcalendar.WAKE_ALARM_SNOOZE"
+        const val ACTION_DISMISS = "io.github.ceniorpomidor.workcalendar.WAKE_ALARM_DISMISS"
+        const val ACTION_CANCEL_SNOOZE = "io.github.ceniorpomidor.workcalendar.WAKE_ALARM_CANCEL_SNOOZE"
     }
 }

@@ -98,7 +98,7 @@ fun specText(spec: ShiftSpec): String {
 }
 
 @Composable
-fun TemplatesScreen(container: AppContainer, onBack: () -> Unit, onEdit: (Long) -> Unit, onApply: (Long) -> Unit) {
+fun TemplatesScreen(container: AppContainer, onBack: (() -> Unit)?, onEdit: (Long) -> Unit, onApply: (Long) -> Unit) {
     val templates by container.schedule.templates.collectAsStateWithLifecycle(initialValue = emptyList())
     val assignments by container.schedule.assignments.collectAsStateWithLifecycle(initialValue = emptyList())
     val snackbar = LocalSnackbar.current

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -19,7 +21,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -31,6 +33,8 @@ import androidx.navigation.navArgument
 import io.github.ceniorpomidor.workcalendar.AppContainer
 import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
 import io.github.ceniorpomidor.workcalendar.domain.model.AppSettings
+import io.github.ceniorpomidor.workcalendar.domain.model.NavItem
+import io.github.ceniorpomidor.workcalendar.domain.model.NavLabels
 import io.github.ceniorpomidor.workcalendar.ui.absence.AbsenceEditScreen
 import io.github.ceniorpomidor.workcalendar.ui.calendar.CalendarScreen
 import io.github.ceniorpomidor.workcalendar.ui.components.LocalCurrency
@@ -44,10 +48,11 @@ import io.github.ceniorpomidor.workcalendar.ui.lock.FinanceLockGate
 import io.github.ceniorpomidor.workcalendar.ui.onboarding.OnboardingScreen
 import io.github.ceniorpomidor.workcalendar.ui.search.SearchScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.AbsenceRulesScreen
+import io.github.ceniorpomidor.workcalendar.ui.settings.AlarmScreen
+import io.github.ceniorpomidor.workcalendar.ui.settings.AppearanceScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.ApplyScheduleScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.BackupScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.ChangeLogScreen
-import io.github.ceniorpomidor.workcalendar.ui.settings.DisplaySettingsScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.HolidaysScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.NotificationSettingsScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.PayoutRuleEditScreen
@@ -61,17 +66,21 @@ import io.github.ceniorpomidor.workcalendar.ui.settings.TemplatesScreen
 import io.github.ceniorpomidor.workcalendar.ui.shift.ConfirmShiftScreen
 import io.github.ceniorpomidor.workcalendar.ui.shift.ShiftEditScreen
 import io.github.ceniorpomidor.workcalendar.ui.shift.UnconfirmedScreen
-import io.github.ceniorpomidor.workcalendar.ui.theme.AppIcons
 import io.github.ceniorpomidor.workcalendar.ui.theme.WorkCalendarTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 
-private data class TopLevel(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
+/** Bottom bar items chosen in the settings. */
+private fun barItems(settings: AppSettings?): List<NavItem> = NavItem.normalize(settings?.appearance?.navItems ?: NavItem.DEFAULT)
 
-private val topLevel = listOf(
-    TopLevel("calendar", "Календарь", AppIcons.CalendarMonth, AppIcons.CalendarMonthFilled),
-    TopLevel("finance", "Финансы", AppIcons.Wallet, AppIcons.WalletFilled),
-    TopLevel("settings", "Настройки", AppIcons.Settings, AppIcons.SettingsFilled),
-)
+/** Back action for a screen that can also be an item of the bottom bar (then it has no back button). */
+private fun backFor(nav: NavHostController, settings: State<AppSettings?>, route: String): (() -> Unit)? {
+    if (barItems(settings.value).any { it.info.route == route }) return null
+    return { nav.popBackStack() }
+}
 
 private fun String?.toDateOrNull(): LocalDate? = this?.takeIf { it.isNotBlank() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
@@ -79,7 +88,7 @@ private fun String?.toDateOrNull(): LocalDate? = this?.takeIf { it.isNotBlank() 
 fun WorkCalendarRoot(container: AppContainer, pendingRoute: String?, onRouteHandled: () -> Unit) {
     val settingsState = container.settings.settings.collectAsStateWithLifecycle(initialValue = null)
     val current = settingsState.value ?: AppSettings()
-    WorkCalendarTheme(themeMode = current.theme, dynamicColor = current.dynamicColor) {
+    WorkCalendarTheme(themeMode = current.theme, dynamicColor = current.dynamicColor, appearance = current.appearance) {
         val snackbar = remember { SnackbarHostState() }
         CompositionLocalProvider(LocalSnackbar provides snackbar, LocalCurrency provides current.currency) {
             if (settingsState.value != null) {
@@ -100,8 +109,18 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
     // graph builder would rebuild the graph (and reset navigation) on every settings change.
     val startDestination = remember { if (settingsState.value?.onboardingDone == true) CALENDAR_ROUTE else "onboarding" }
     val backStack by nav.currentBackStackEntryAsState()
-    val currentRoute = backStack?.destination?.route
-    val showBottomBar = topLevel.any { currentRoute?.substringBefore('?') == it.route }
+    val currentRoute = backStack?.destination?.route?.substringBefore('?')
+    val navItems = barItems(settingsState.value)
+    val navLabels = settingsState.value?.appearance?.navLabels ?: NavLabels.ALWAYS
+    val showBottomBar = navItems.any { it.info.route == currentRoute }
+    val unconfirmed by remember(container) {
+        flow {
+            while (true) {
+                emit(container.clock.now())
+                delay(60_000)
+            }
+        }.flatMapLatest { now -> container.shifts.observeUnconfirmed(now) }.map { it.size }
+    }.collectAsStateWithLifecycle(initialValue = 0)
 
     LaunchedEffect(pendingRoute) {
         val route = pendingRoute ?: return@LaunchedEffect
@@ -180,7 +199,7 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                     )
                 }
                 composable("unconfirmed") {
-                    UnconfirmedScreen(container, onOpen = { nav.navigate("confirm/$it") }, onBack = { nav.popBackStack() })
+                    UnconfirmedScreen(container, onOpen = { nav.navigate("confirm/$it") }, onBack = backFor(nav, settingsState, "unconfirmed"))
                 }
                 composable(
                     "absence/new?type={type}&start={start}",
@@ -217,6 +236,7 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                     FinanceLockGate(container, settingsState.value ?: AppSettings()) {
                         FinanceScreen(
                             container = container,
+                            onBack = backFor(nav, settingsState, "finance"),
                             onHistory = { nav.navigate("finance/history") },
                             onStats = { nav.navigate("finance/stats") },
                             onPayout = { key -> nav.navigate("payment/new?key=$key") },
@@ -235,7 +255,7 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                     FinanceLockGate(container, settingsState.value ?: AppSettings()) {
                         HistoryScreen(
                             container = container,
-                            onBack = { nav.popBackStack() },
+                            onBack = backFor(nav, settingsState, "finance/history"),
                             onShift = { nav.navigate("confirm/$it") },
                             onPayment = { nav.navigate("payment/$it") },
                             onAccrual = { nav.navigate("accrual/$it") },
@@ -244,7 +264,7 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                     }
                 }
                 composable("finance/stats") {
-                    FinanceLockGate(container, settingsState.value ?: AppSettings()) { StatsScreen(container, onBack = { nav.popBackStack() }) }
+                    FinanceLockGate(container, settingsState.value ?: AppSettings()) { StatsScreen(container, onBack = backFor(nav, settingsState, "finance/stats")) }
                 }
                 composable(
                     "payment/new?key={key}",
@@ -266,7 +286,7 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                 composable("search") {
                     SearchScreen(
                         container = container,
-                        onBack = { nav.popBackStack() },
+                        onBack = backFor(nav, settingsState, "search"),
                         onShift = { nav.navigate("confirm/$it") },
                         onDate = { nav.navigate("calendar?date=$it") },
                         onAbsence = { nav.navigate("absence/$it") },
@@ -281,7 +301,7 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                 composable("settings/templates") {
                     TemplatesScreen(
                         container = container,
-                        onBack = { nav.popBackStack() },
+                        onBack = backFor(nav, settingsState, "settings/templates"),
                         onEdit = { nav.navigate("settings/template/$it") },
                         onApply = { nav.navigate("settings/apply/$it") },
                     )
@@ -306,7 +326,10 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                 }
                 composable("settings/absence") { AbsenceRulesScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
                 composable("settings/notifications") { NotificationSettingsScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
-                composable("settings/display") { DisplaySettingsScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
+                composable("settings/display") { AppearanceScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
+                composable("alarm") {
+                    AlarmScreen(container, settingsState.value ?: AppSettings(), onBack = backFor(nav, settingsState, "alarm"))
+                }
                 composable("settings/holidays") { HolidaysScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
                 composable("settings/backup") { BackupScreen(container, onBack = { nav.popBackStack() }) }
                 composable("settings/security") { SecurityScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
@@ -315,13 +338,19 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
         }
         if (showBottomBar) {
             NavigationBar {
-                for (item in topLevel) {
-                    val selected = currentRoute?.substringBefore('?') == item.route
+                for (item in navItems) {
+                    val info = item.info
+                    val selected = currentRoute == info.route
                     NavigationBarItem(
                         selected = selected,
-                        onClick = { navigateTopLevel(nav, item.route) },
-                        icon = { Icon(if (selected) item.selectedIcon else item.icon, contentDescription = null) },
-                        label = { Text(item.label) },
+                        onClick = { navigateTopLevel(nav, info.route) },
+                        icon = {
+                            BadgedBox(badge = { if (item == NavItem.UNCONFIRMED && unconfirmed > 0) Badge { Text(unconfirmed.toString()) } }) {
+                                Icon(if (selected) info.selectedIcon else info.icon, contentDescription = if (navLabels == NavLabels.NEVER) info.label else null)
+                            }
+                        },
+                        label = if (navLabels == NavLabels.NEVER) null else ({ Text(info.label, maxLines = 1, overflow = TextOverflow.Ellipsis) }),
+                        alwaysShowLabel = navLabels == NavLabels.ALWAYS,
                     )
                 }
             }

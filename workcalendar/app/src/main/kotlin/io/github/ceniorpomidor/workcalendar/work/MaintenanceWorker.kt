@@ -23,6 +23,7 @@ class MaintenanceWorker(context: Context, params: WorkerParameters) : CoroutineW
         return try {
             container.schedule.ensureHorizon()
             container.notifications.reschedule()
+            container.wakeAlarms.reschedule()
             container.backup.autoBackupIfDue()
             WidgetUpdater.updateAll(applicationContext)
             Result.success()

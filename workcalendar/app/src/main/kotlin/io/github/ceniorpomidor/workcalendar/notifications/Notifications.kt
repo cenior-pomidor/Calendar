@@ -8,6 +8,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -26,6 +28,8 @@ object Notifications {
     const val CHANNEL_REMINDERS = "reminders"
     const val CHANNEL_PAYOUTS = "payouts"
     const val CHANNEL_ABSENCES = "absences"
+    const val CHANNEL_ALARM = "wake_alarm"
+    const val CHANNEL_ALARM_STATUS = "wake_alarm_status"
 
     const val KEY_HOURS = "hours"
     const val EXTRA_ROUTE = "route"
@@ -45,6 +49,20 @@ object Notifications {
             },
             NotificationChannel(CHANNEL_ABSENCES, context.getString(R.string.channel_absences), NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = context.getString(R.string.channel_absences_description)
+            },
+            NotificationChannel(CHANNEL_ALARM, context.getString(R.string.channel_alarm), NotificationManager.IMPORTANCE_HIGH).apply {
+                description = context.getString(R.string.channel_alarm_description)
+                val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                // Played on the alarm stream: rings in silent and vibrate modes, passes "Do not disturb" when alarms are allowed.
+                setSound(sound, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 800, 600, 800, 600)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                setBypassDnd(true)
+            },
+            NotificationChannel(CHANNEL_ALARM_STATUS, context.getString(R.string.channel_alarm_status), NotificationManager.IMPORTANCE_LOW).apply {
+                description = context.getString(R.string.channel_alarm_status_description)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             },
         )
         manager.createNotificationChannels(channels)

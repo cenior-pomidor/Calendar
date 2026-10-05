@@ -82,6 +82,7 @@ fun DayPanel(
     onAddAbsence: (AbsenceType) -> Unit,
     onOpenAbsence: (Absence) -> Unit,
     onSaveNote: (String) -> Unit,
+    alarm: DayAlarmUi? = null,
 ) {
     var noteDialog by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -116,6 +117,7 @@ fun DayPanel(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        if (alarm != null) DayAlarmRow(date, alarm)
 
         info?.note?.let { note ->
             Card(

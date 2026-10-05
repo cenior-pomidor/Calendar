@@ -117,7 +117,13 @@ def cmd_frame(png, name):
         print(f"=====END {name}=====")
 
 
-def cmd_dump(name, inline="0", expect=None):
+def has_text(lines, expect):
+    """[expect] is a part of a text on the screen; with a leading "=" the whole text."""
+    return any(t == expect[1:] for t in lines) if expect.startswith("=") else any(expect in t for t in lines)
+
+
+def cmd_dump(name, inline="0", *expects):
+    """Prints the texts of the screen; fails when one of [expects] is not on it."""
     time.sleep(1.5)
     root = dump_xml()
     print(f"===== SCREEN {name} =====")
@@ -129,11 +135,26 @@ def cmd_dump(name, inline="0", expect=None):
     screenshot(name, inline == "1")
     if crashed():
         sys.exit(1)
-    if expect and not any(expect in t for t in lines):
-        print(f"!! expected text not found on {name}: {expect}")
+    missing = [e for e in expects if e and not has_text(lines, e)]
+    if missing:
+        print(f"!! expected text not found on {name}: {', '.join(missing)}")
         log = adb("logcat", "-d").stdout.splitlines()
         print("\n".join(line for line in log if "WorkCalendar" in line or " E " in line)[-6000:])
         sys.exit(1)
+
+
+def cmd_wait(name, expect, timeout="60"):
+    """Waits until [expect] appears on the screen (e.g. a screen opened by the system), then dumps it."""
+    deadline = time.time() + int(timeout)
+    while time.time() < deadline:
+        root = dump_xml()
+        if root is not None and has_text(texts(root), expect):
+            cmd_dump(name, "1", expect)
+            return
+        time.sleep(2)
+    print(f"!! {expect} did not appear in {timeout} s")
+    cmd_dump(name, "1")
+    sys.exit(4)
 
 
 def keyboard_shown():
@@ -279,6 +300,7 @@ if __name__ == "__main__":
     command, *args = sys.argv[1:]
     {
         "dump": cmd_dump,
+        "wait": cmd_wait,
         "tap": cmd_tap,
         "type": cmd_type,
         "route": cmd_route,

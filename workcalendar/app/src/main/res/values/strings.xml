@@ -11,4 +11,8 @@
     <string name="channel_payouts_description">Напоминания о предстоящих выплатах с расчётной суммой</string>
     <string name="channel_absences">Отпускные и больничные</string>
     <string name="channel_absences_description">Напоминания о выплате отпускных и пособия</string>
+    <string name="channel_alarm">Будильник</string>
+    <string name="channel_alarm_description">Звонок будильника перед сменой и в выбранные дни. Здесь можно выбрать мелодию и вибрацию</string>
+    <string name="channel_alarm_status">Отложенный будильник</string>
+    <string name="channel_alarm_status_description">Время повторного звонка с кнопкой «Выключить»</string>
 </resources>

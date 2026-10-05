@@ -38,6 +38,13 @@ t = datetime.date.today()
 m = t.month - 1 + int(sys.argv[1])
 print(names[m % 12], t.year + m // 12)" "$1"
 }
+# Title of today in the day panel: the selection stays on today while months are swiped.
+today_title() {
+  python3 -c "import datetime
+names = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
+t = datetime.date.today()
+print(t.day, names[t.month - 1])"
+}
 # `input swipe` waits until the app has handled each event: while the app is still busy after the
 # setup wizard (generating the schedule), a quick swipe can turn into a plain touch without moves.
 # Let it settle first and log how long the swipe command takes.
@@ -59,7 +66,7 @@ if ! $UI dump swipe-fast 0 "$(month_title 1)"; then
 fi
 # A slow drag over 60% of the width, slightly diagonal.
 adb shell input swipe 950 950 300 1150 900
-$UI dump swipe-slow 1 "$(month_title 2)" || exit 1
+$UI dump swipe-slow 1 "$(month_title 2)" "$(today_title)" || exit 1
 adb shell input swipe 150 1000 950 1000 250
 $UI dump swipe-back 0 "$(month_title 1)" || exit 1
 $UI tap "Сегодня"
@@ -110,6 +117,41 @@ $UI dump notifications 0 || exit 1
 $UI route "search"
 $UI dump search 0 || exit 1
 
+# ---- Appearance: another palette and the alarm in the bottom bar ----
+$UI route "settings/display"
+$UI dump appearance 1 "Цветовая палитра" || exit 1
+$UI tap "Зелёный" 1
+$UI tap "Будильник" 1
+sleep 2
+$UI dump appearance-after 0 || exit 1
+$UI route "calendar"
+$UI dump calendar-green 1 "=Будильник" || exit 1
+
+# ---- Alarm: every working day, one more on a day off, test ring ----
+$UI tap "Будильник" 1
+$UI dump alarm 0 "Будильник во все рабочие дни" || exit 1
+$UI tap "Будильник во все рабочие дни" 1
+sleep 2
+$UI dump alarm-on 1 "Ближайшие будильники" "07:30" || exit 1
+SATURDAY=$(python3 -c "import datetime
+d = datetime.date.today() + datetime.timedelta(days=1)
+while d.weekday() != 5:
+    d += datetime.timedelta(days=1)
+print(d)")
+$UI route "day/$SATURDAY"
+$UI dump day-no-alarm 0 "Включите, чтобы разбудить в этот день" || exit 1
+$UI tap "Включите, чтобы разбудить в этот день"
+$UI tap "Готово" 1
+sleep 2
+$UI dump day-alarm 1 "Будильник 07:00" "Только в этот день" || exit 1
+$UI route "alarm"
+$UI tap "Проверить будильник"
+$UI wait alarm-test "Отложить на 10 мин" 30 || exit 1
+$UI notifications "Проверка будильника" 10 || exit 1
+$UI tap "Выключить" 1
+sleep 2
+$UI dump alarm-after-test 0 "Ближайшие будильники" || exit 1
+
 # ---- Notifications: shift end -> quick actions (needs adb root to move the clock) ----
 next_weekday() {
   python3 -c "import datetime,sys
@@ -151,6 +193,25 @@ if [ "$(adb shell date +%F | tr -d '\r')" = "$D1" ]; then
   adb shell cmd statusbar collapse
   $UI route "day/$D2"
   $UI dump day-after-reply 1 || exit 1
+
+  # ---- The alarm of the next working day rings by itself over the lock screen ----
+  D3=$(next_weekday "$D2")
+  adb shell appops set $PKG USE_FULL_SCREEN_INTENT allow || true
+  adb shell input keyevent 223
+  $UI set-time "${D3}T07:29:30"
+  if $UI wait alarm-ring "Отложить на 10 мин" 90; then
+    $UI tap "Отложить на 10 мин" 1
+    $UI notifications "Будильник отложен до 07:40" 15 || exit 1
+    adb shell input keyevent 223
+    $UI set-time "${D3}T07:39:30"
+    $UI wait alarm-snoozed-ring "Будильник 07:40" 90 || exit 1
+    $UI tap "Выключить" 1
+  else
+    echo "!! WARNING: the alarm screen did not open over the lock screen"
+    $UI notifications "Будильник 07:30" 5 || exit 1
+  fi
+  echo "===== NEXT ALARM CLOCK ====="
+  adb shell dumpsys alarm | grep -i -A3 "next alarm clock" | head -12
 else
   echo "!! the emulator clock could not be changed, notification flow skipped"
 fi

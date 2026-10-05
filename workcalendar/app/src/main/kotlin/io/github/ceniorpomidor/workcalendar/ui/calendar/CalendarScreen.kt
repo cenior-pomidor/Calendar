@@ -23,6 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -50,9 +51,12 @@ import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.OutDateStyle
 import com.kizitonwose.calendar.core.daysOfWeek
 import io.github.ceniorpomidor.workcalendar.AppContainer
+import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmPlanner
 import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
+import io.github.ceniorpomidor.workcalendar.domain.model.AlarmSettings
 import io.github.ceniorpomidor.workcalendar.domain.model.Shift
 import io.github.ceniorpomidor.workcalendar.domain.pay.PeriodSummary
+import io.github.ceniorpomidor.workcalendar.domain.time.TimeMath
 import io.github.ceniorpomidor.workcalendar.domain.util.Formats
 import io.github.ceniorpomidor.workcalendar.ui.components.Banner
 import io.github.ceniorpomidor.workcalendar.ui.components.BannerKind
@@ -62,6 +66,7 @@ import io.github.ceniorpomidor.workcalendar.ui.components.money
 import io.github.ceniorpomidor.workcalendar.ui.theme.AppIcons
 import io.github.ceniorpomidor.workcalendar.ui.theme.AppTheme
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
@@ -89,6 +94,7 @@ fun CalendarScreen(
     val vm: CalendarViewModel = viewModel { CalendarViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
     val selected by vm.selectedDate.collectAsStateWithLifecycle()
+    val selectedDay by vm.selectedDay.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
     val today = container.clock.today()
@@ -133,18 +139,16 @@ fun CalendarScreen(
         }
     }
     LaunchedEffect(calendarState) {
-        var previous: YearMonth? = null
         snapshotFlow { visibleMonth }.distinctUntilChanged().collectLatest { month ->
             // Data of neighbouring months is already loaded: reload only when the swipe has settled.
             calendarState.awaitSettled()
             vm.onMonthVisible(month)
-            // The day panel follows the month shown by the calendar.
-            if (previous != null && YearMonth.from(vm.selectedDate.value) != month) {
-                vm.select(if (YearMonth.from(today) == month) today else month.atDay(1))
-            }
-            previous = month
         }
     }
+
+    // The selection stays when months are swiped and may be outside the loaded months.
+    val dayInfo = state.days[selected] ?: selectedDay?.takeIf { it.date == selected }
+    val dayAlarm = if (selected.isBefore(today)) null else dayAlarmUi(container, state.settings.alarm, selected, dayInfo, today, scope, snackbar)
 
     val actions = ShiftActions(
         confirm = { onConfirmShift(it.id) },
@@ -231,7 +235,7 @@ fun CalendarScreen(
             }
             Spacer(Modifier.height(8.dp))
             DayPanel(
-                info = state.days[selected],
+                info = dayInfo,
                 date = selected,
                 calc = state.calc,
                 now = state.now,
@@ -240,6 +244,7 @@ fun CalendarScreen(
                 onAddAbsence = { type -> onNewAbsence(type, selected) },
                 onOpenAbsence = { onOpenAbsence(it.id) },
                 onSaveNote = { text -> scope.launchSafely(snackbar) { vm.saveNote(selected, text) } },
+                alarm = dayAlarm,
             )
             Spacer(Modifier.height(16.dp))
         }
@@ -273,6 +278,38 @@ fun CalendarScreen(
     }
     if (legend) LegendDialog { legend = false }
 }
+
+/** Alarm of the selected day: the working day alarm and the change made for this day only. */
+private fun dayAlarmUi(
+    container: AppContainer,
+    settings: AlarmSettings,
+    date: LocalDate,
+    info: DayInfo?,
+    today: LocalDate,
+    scope: CoroutineScope,
+    snackbar: SnackbarHostState,
+): DayAlarmUi {
+    val shifts = info?.shifts.orEmpty()
+    val regular = AlarmPlanner.regular(settings, date, shifts)
+    fun save(success: String, transform: (AlarmSettings) -> AlarmSettings) = scope.launchSafely(snackbar, success = success) {
+        container.settings.update { it.copy(alarm = transform(it.alarm)) }
+    }
+    val day = Formats.shortDate(date)
+    // For a day with a shift the time is offered as if the alarm were on for all working days.
+    val suggested = AlarmPlanner.regular(settings.copy(workDays = true, includeExtraShifts = true), date, shifts)?.at?.takeIf { it.toLocalDate() == date }
+    return DayAlarmUi(
+        effective = AlarmPlanner.forDay(settings, date, shifts),
+        regular = regular,
+        changed = settings.dayAlarm(date) != null,
+        suggestedMinute = suggested?.let { TimeMath.minuteOfDay(it.toLocalTime()) } ?: DEFAULT_ALARM_MINUTE,
+        onSet = { minute -> save("Будильник на $day в ${Formats.time(TimeMath.timeOfMinute(minute))}") { it.withDay(date, minute, today) } },
+        onOff = { save("Будильник на $day выключен") { if (regular != null) it.withDay(date, null, today) else it.withoutDay(date, today) } },
+        onReset = { save("Будильник на $day — как во все рабочие дни") { it.withoutDay(date, today) } },
+    )
+}
+
+/** Alarm time offered for a day without shifts. */
+private const val DEFAULT_ALARM_MINUTE = 7 * 60
 
 /** Approximate height of the summary row, used to size the calendar cells. */
 private val SUMMARY_ROW_HEIGHT = 64.dp

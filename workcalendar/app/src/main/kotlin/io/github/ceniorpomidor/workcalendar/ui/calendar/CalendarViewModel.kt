@@ -103,6 +103,25 @@ class CalendarViewModel(private val c: AppContainer) : ViewModel() {
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CalendarUiState(month.value, c.clock.now()))
 
+    /**
+     * The selected day, observed on its own: after swiping away the selection stays where it was
+     * and may lie outside the loaded months.
+     */
+    val selectedDay: StateFlow<DayInfo?> = selectedDate.flatMapLatest { date ->
+        val range = DateRange(date, date)
+        combine(
+            c.shifts.observeRange(range),
+            c.absences.observeRange(range),
+            c.db.miscDao().observeNotes(date, date),
+            c.calc.context,
+            ticker,
+        ) { shifts, absences, notes, calc, now ->
+            val dayShifts = shifts.filter { it.isVisible && it.date == date }.sortedBy { it.plannedStart }
+            dayInfo(date, dayShifts, absences.firstOrNull { date in it.range }, notes.firstOrNull()?.text, calc, now)
+        }
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     fun onMonthVisible(m: YearMonth) {
         if (month.value == m && !state.value.loading) return
         month.value = m

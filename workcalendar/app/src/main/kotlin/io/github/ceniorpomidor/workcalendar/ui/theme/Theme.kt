@@ -1,5 +1,6 @@
 package io.github.ceniorpomidor.workcalendar.ui.theme
 
+import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -11,69 +12,78 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import io.github.ceniorpomidor.workcalendar.domain.color.ThemeColors
+import io.github.ceniorpomidor.workcalendar.domain.model.AppearanceSettings
 import io.github.ceniorpomidor.workcalendar.domain.model.ThemeMode
 
-private val LightColors: ColorScheme = lightColorScheme(
-    primary = Color(0xFF1F5FA8),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFD6E3FF),
-    onPrimaryContainer = Color(0xFF001B3E),
-    secondary = Color(0xFF555F71),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFD9E3F8),
-    onSecondaryContainer = Color(0xFF121C2B),
-    tertiary = Color(0xFF6E5676),
-    tertiaryContainer = Color(0xFFF7D8FF),
-    onTertiaryContainer = Color(0xFF27132F),
-    background = Color(0xFFF8F9FF),
-    onBackground = Color(0xFF191C20),
-    surface = Color(0xFFF8F9FF),
-    onSurface = Color(0xFF191C20),
-    surfaceVariant = Color(0xFFE0E2EC),
-    onSurfaceVariant = Color(0xFF44474E),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFF2F3FA),
-    surfaceContainer = Color(0xFFECEEF4),
-    surfaceContainerHigh = Color(0xFFE6E8EE),
-    surfaceContainerHighest = Color(0xFFE1E2E8),
-    outline = Color(0xFF74777F),
-    outlineVariant = Color(0xFFC4C6CF),
+// Error colors and other roles that do not depend on the palette.
+private val LightBase: ColorScheme = lightColorScheme(
     error = Color(0xFFBA1A1A),
+    onError = Color.White,
     errorContainer = Color(0xFFFFDAD6),
     onErrorContainer = Color(0xFF410002),
 )
 
-private val DarkColors: ColorScheme = darkColorScheme(
-    primary = Color(0xFFA9C7FF),
-    onPrimary = Color(0xFF003063),
-    primaryContainer = Color(0xFF00468C),
-    onPrimaryContainer = Color(0xFFD6E3FF),
-    secondary = Color(0xFFBDC7DC),
-    onSecondary = Color(0xFF273141),
-    secondaryContainer = Color(0xFF3D4758),
-    onSecondaryContainer = Color(0xFFD9E3F8),
-    tertiary = Color(0xFFDABDE2),
-    tertiaryContainer = Color(0xFF553F5D),
-    onTertiaryContainer = Color(0xFFF7D8FF),
-    background = Color(0xFF111318),
-    onBackground = Color(0xFFE1E2E8),
-    surface = Color(0xFF111318),
-    onSurface = Color(0xFFE1E2E8),
-    surfaceVariant = Color(0xFF44474E),
-    onSurfaceVariant = Color(0xFFC4C6CF),
-    surfaceContainerLowest = Color(0xFF0C0E13),
-    surfaceContainerLow = Color(0xFF191C20),
-    surfaceContainer = Color(0xFF1D2024),
-    surfaceContainerHigh = Color(0xFF282A2F),
-    surfaceContainerHighest = Color(0xFF33353A),
-    outline = Color(0xFF8E9099),
-    outlineVariant = Color(0xFF44474E),
+private val DarkBase: ColorScheme = darkColorScheme(
     error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
     errorContainer = Color(0xFF93000A),
     onErrorContainer = Color(0xFFFFDAD6),
+)
+
+/** Material color scheme of a generated palette. */
+fun ThemeColors.toColorScheme(dark: Boolean): ColorScheme = (if (dark) DarkBase else LightBase).copy(
+    primary = Color(primary),
+    onPrimary = Color(onPrimary),
+    primaryContainer = Color(primaryContainer),
+    onPrimaryContainer = Color(onPrimaryContainer),
+    inversePrimary = Color(inversePrimary),
+    secondary = Color(secondary),
+    onSecondary = Color(onSecondary),
+    secondaryContainer = Color(secondaryContainer),
+    onSecondaryContainer = Color(onSecondaryContainer),
+    tertiary = Color(tertiary),
+    onTertiary = Color(onTertiary),
+    tertiaryContainer = Color(tertiaryContainer),
+    onTertiaryContainer = Color(onTertiaryContainer),
+    background = Color(background),
+    onBackground = Color(onBackground),
+    surface = Color(surface),
+    onSurface = Color(onSurface),
+    surfaceVariant = Color(surfaceVariant),
+    onSurfaceVariant = Color(onSurfaceVariant),
+    surfaceTint = Color(primary),
+    inverseSurface = Color(inverseSurface),
+    inverseOnSurface = Color(inverseOnSurface),
+    outline = Color(outline),
+    outlineVariant = Color(outlineVariant),
+    surfaceBright = Color(surfaceBright),
+    surfaceDim = Color(surfaceDim),
+    surfaceContainerLowest = Color(surfaceContainerLowest),
+    surfaceContainerLow = Color(surfaceContainerLow),
+    surfaceContainer = Color(surfaceContainer),
+    surfaceContainerHigh = Color(surfaceContainerHigh),
+    surfaceContainerHighest = Color(surfaceContainerHighest),
+)
+
+/** Black background for a dark scheme (wallpaper colors); containers stay slightly lighter. */
+private fun ColorScheme.withPureBlack(): ColorScheme = copy(
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceDim = Color.Black,
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = lerp(surfaceContainerLow, Color.Black, 0.45f),
+    surfaceContainer = lerp(surfaceContainer, Color.Black, 0.4f),
+    surfaceContainerHigh = lerp(surfaceContainerHigh, Color.Black, 0.3f),
+    surfaceContainerHighest = lerp(surfaceContainerHighest, Color.Black, 0.25f),
 )
 
 /** Colors of day and shift states; the same in the calendar, lists, legend and widget. */
@@ -167,6 +177,7 @@ object AppTheme {
 fun WorkCalendarTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = true,
+    appearance: AppearanceSettings = AppearanceSettings(),
     content: @Composable () -> Unit,
 ) {
     val dark = when (themeMode) {
@@ -175,10 +186,26 @@ fun WorkCalendarTheme(
         ThemeMode.DARK -> true
     }
     val context = LocalContext.current
-    val colors = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        dark -> DarkColors
-        else -> LightColors
+    val pureBlack = dark && appearance.pureBlack
+    val generated = remember(appearance.palette, appearance.customHue, dark, pureBlack) {
+        ThemeColors.of(appearance.palette, appearance.customHue, dark, pureBlack).toColorScheme(dark)
+    }
+    val colors = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val wallpaper = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        if (pureBlack) wallpaper.withPureBlack() else wallpaper
+    } else {
+        generated
+    }
+    // Status and navigation bar icons follow the theme of the app, not only the system one.
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window ?: return@SideEffect
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
     }
     CompositionLocalProvider(LocalStatusPalette provides if (dark) DarkStatus else LightStatus) {
         MaterialTheme(colorScheme = colors, content = content)

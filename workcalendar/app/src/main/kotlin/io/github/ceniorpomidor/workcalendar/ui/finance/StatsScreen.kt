@@ -50,7 +50,7 @@ import java.time.YearMonth
 
 /** Monthly comparison of earnings and hours, plan versus fact, averages and counts. */
 @Composable
-fun StatsScreen(container: AppContainer, onBack: () -> Unit) {
+fun StatsScreen(container: AppContainer, onBack: (() -> Unit)?) {
     var monthsCount by rememberSaveable { mutableStateOf(6) }
     val current = YearMonth.from(container.clock.today())
     val data by remember {

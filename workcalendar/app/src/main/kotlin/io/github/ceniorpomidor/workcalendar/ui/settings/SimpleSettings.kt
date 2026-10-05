@@ -7,10 +7,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,16 +19,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import io.github.ceniorpomidor.workcalendar.AppContainer
 import io.github.ceniorpomidor.workcalendar.domain.absence.InsuranceExperience
 import io.github.ceniorpomidor.workcalendar.domain.model.AppSettings
-import io.github.ceniorpomidor.workcalendar.domain.model.ThemeMode
 import io.github.ceniorpomidor.workcalendar.domain.notify.NotificationKind
 import io.github.ceniorpomidor.workcalendar.domain.notify.PlannedNotification
-import io.github.ceniorpomidor.workcalendar.domain.util.Formats
 import io.github.ceniorpomidor.workcalendar.notifications.Notifications
 import io.github.ceniorpomidor.workcalendar.ui.components.Banner
 import io.github.ceniorpomidor.workcalendar.ui.components.BannerKind
@@ -47,11 +40,10 @@ import io.github.ceniorpomidor.workcalendar.ui.components.TextInput
 import io.github.ceniorpomidor.workcalendar.ui.components.TimeField
 import io.github.ceniorpomidor.workcalendar.ui.components.ValueRow
 import io.github.ceniorpomidor.workcalendar.ui.components.launchSafely
-import java.time.DayOfWeek
 
 /** Saves a settings change and reports errors. */
 @Composable
-private fun rememberSettingsUpdater(container: AppContainer): ((AppSettings) -> AppSettings) -> Unit {
+internal fun rememberSettingsUpdater(container: AppContainer): ((AppSettings) -> AppSettings) -> Unit {
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
     return { transform -> scope.launchSafely(snackbar) { container.settings.update(transform) } }
@@ -99,43 +91,6 @@ fun ProfileScreen(container: AppContainer, settings: AppSettings, onBack: () -> 
                     currency = it.take(4)
                     update { s -> s.copy(currency = currency.ifBlank { "₽" }) }
                 })
-            }
-        }
-    }
-}
-
-@Composable
-fun DisplaySettingsScreen(container: AppContainer, settings: AppSettings, onBack: () -> Unit) {
-    val update = rememberSettingsUpdater(container)
-    val c = settings.calendar
-    SubScreen(title = "Календарь и оформление", onBack = onBack) { padding ->
-        ScrollColumn(padding) {
-            SectionCard(title = "Тема") {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(ThemeMode.SYSTEM to "Как в системе", ThemeMode.LIGHT to "Светлая", ThemeMode.DARK to "Тёмная").forEach { (mode, label) ->
-                        FilterChip(selected = settings.theme == mode, onClick = { update { it.copy(theme = mode) } }, label = { Text(label) })
-                    }
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    SwitchRow("Цвета обоев (Material You)", null, settings.dynamicColor) { v -> update { it.copy(dynamicColor = v) } }
-                }
-            }
-            SectionCard(title = "Календарь") {
-                Text("Первый день недели", style = MaterialTheme.typography.bodyMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY, DayOfWeek.SATURDAY).forEach { day ->
-                        FilterChip(
-                            selected = c.firstDayOfWeek == day,
-                            onClick = { update { it.copy(calendar = it.calendar.copy(firstDayOfWeek = day)) } },
-                            label = { Text(Formats.weekdayFull(day).replaceFirstChar { ch -> ch.uppercase() }) },
-                        )
-                    }
-                }
-                SwitchRow("Время смен в ячейках", null, c.showShiftTimes) { v -> update { it.copy(calendar = it.calendar.copy(showShiftTimes = v)) } }
-                SwitchRow("Отработанные часы после подтверждения", null, c.showWorkedHours) { v -> update { it.copy(calendar = it.calendar.copy(showWorkedHours = v)) } }
-                SwitchRow("Заработок за день в ячейках", null, c.showDayEarnings) { v -> update { it.copy(calendar = it.calendar.copy(showDayEarnings = v)) } }
-                SwitchRow("Выделять праздники", null, c.showHolidays) { v -> update { it.copy(calendar = it.calendar.copy(showHolidays = v)) } }
-                SwitchRow("Сводка месяца над календарём", null, c.showMonthSummary) { v -> update { it.copy(calendar = it.calendar.copy(showMonthSummary = v)) } }
             }
         }
     }

@@ -44,8 +44,9 @@ fun SettingsScreen(container: AppContainer, settings: AppSettings, onNavigate: (
                 SettingRow("Праздники и переносы", "Производственный календарь", AppIcons.Celebration, onClick = { onNavigate("settings/holidays") })
             }
             SectionCard(title = "Приложение") {
+                SettingRow("Будильник", alarmSummary(settings.alarm), AppIcons.Alarm, onClick = { onNavigate("alarm") })
                 SettingRow("Уведомления", "Окончание смены, выплаты, напоминания", AppIcons.NotificationsActive, onClick = { onNavigate("settings/notifications") })
-                SettingRow("Календарь и оформление", "Тема, вид ячеек, первый день недели", AppIcons.Palette, onClick = { onNavigate("settings/display") })
+                SettingRow("Оформление", "Тема, цветовая палитра, нижнее меню, вид календаря", AppIcons.Palette, onClick = { onNavigate("settings/display") })
                 SettingRow(
                     "Защита финансов",
                     if (settings.security.financeLock) "Включена (PIN${if (settings.security.biometric) " и биометрия" else ""})" else "PIN-код или отпечаток для раздела «Финансы»",
@@ -68,7 +69,7 @@ fun SettingsScreen(container: AppContainer, settings: AppSettings, onNavigate: (
     if (askReset) {
         ConfirmDialog(
             title = "Сбросить настройки?",
-            text = "Настройки отображения, уведомлений и правил расчёта вернутся к значениям по умолчанию. Смены, ставки, выплаты и графики не изменятся.",
+            text = "Оформление, уведомления, будильник и правила расчёта вернутся к значениям по умолчанию. Смены, ставки, выплаты и графики не изменятся.",
             confirmText = "Сбросить",
             destructive = true,
             onConfirm = { scope.launchSafely(snackbar, success = "Настройки сброшены") { container.backup.resetSettings() } },

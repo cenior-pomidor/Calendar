@@ -15,6 +15,124 @@ enum class ThemeMode {
     DARK,
 }
 
+/** Color palette of the app when the wallpaper colors (Material You) are not used. */
+@Serializable
+enum class ColorPalette {
+    BLUE,
+    INDIGO,
+    VIOLET,
+    PINK,
+    RED,
+    ORANGE,
+    AMBER,
+    OLIVE,
+    GREEN,
+    TEAL,
+    GRAPHITE,
+
+    /** Hue chosen by the user ([AppearanceSettings.customHue]). */
+    CUSTOM,
+}
+
+/** Destinations that can be placed in the bottom navigation bar. */
+@Serializable
+enum class NavItem {
+    CALENDAR,
+    FINANCE,
+    STATS,
+    HISTORY,
+    UNCONFIRMED,
+    ALARM,
+    SEARCH,
+    SCHEDULE,
+    SETTINGS,
+    ;
+
+    companion object {
+        /** Always shown: the calendar is the start screen, settings give access to everything else. */
+        val REQUIRED: Set<NavItem> = setOf(CALENDAR, SETTINGS)
+        val DEFAULT: List<NavItem> = listOf(CALENDAR, FINANCE, SETTINGS)
+        const val MAX = 5
+
+        /** Keeps the user's order, removes duplicates, adds the required items and limits the count. */
+        fun normalize(items: List<NavItem>): List<NavItem> {
+            val result = items.distinct().toMutableList()
+            if (CALENDAR !in result) result.add(0, CALENDAR)
+            if (SETTINGS !in result) result.add(SETTINGS)
+            while (result.size > MAX) {
+                val extra = result.lastOrNull { it !in REQUIRED } ?: break
+                result.remove(extra)
+            }
+            return result
+        }
+    }
+}
+
+/** When the bottom bar shows the item names. */
+@Serializable
+enum class NavLabels {
+    ALWAYS,
+    SELECTED,
+    NEVER,
+}
+
+@Serializable
+data class AppearanceSettings(
+    val palette: ColorPalette = ColorPalette.BLUE,
+    /** Hue (0–359°) of the [ColorPalette.CUSTOM] palette. */
+    val customHue: Int = 258,
+    /** Black background in the dark theme (saves power on OLED screens). */
+    val pureBlack: Boolean = false,
+    val navItems: List<NavItem> = NavItem.DEFAULT,
+    val navLabels: NavLabels = NavLabels.ALWAYS,
+)
+
+/** How the time of the working day alarm is chosen. */
+@Serializable
+enum class AlarmTimeMode {
+    /** A fixed interval before the start of the first shift of the day. */
+    BEFORE_SHIFT,
+
+    /** The same time of day on every working day. */
+    FIXED_TIME,
+}
+
+/** Alarm of one day chosen by the user: replaces the working day alarm or turns it off. */
+@Serializable
+data class DayAlarm(
+    val date: LocalDate,
+    /** Minute of the day; null — no alarm on this day. */
+    val minute: Int?,
+)
+
+@Serializable
+data class AlarmSettings(
+    /** Alarm on every upcoming working day (a day with a planned shift). */
+    val workDays: Boolean = false,
+    val mode: AlarmTimeMode = AlarmTimeMode.BEFORE_SHIFT,
+    /** For [AlarmTimeMode.BEFORE_SHIFT]: minutes before the start of the first shift. */
+    val minutesBefore: Int = 90,
+    /** For [AlarmTimeMode.FIXED_TIME]: minute of the day. */
+    val fixedMinute: Int = 6 * 60 + 30,
+    /** Also on days with only extra shifts. */
+    val includeExtraShifts: Boolean = true,
+    val snoozeMinutes: Int = 10,
+    /** The alarm stops ringing by itself after this time, minutes. */
+    val ringMinutes: Int = 10,
+    /** Single days: alarms on chosen days and days without the working day alarm. */
+    val days: List<DayAlarm> = emptyList(),
+) {
+    fun dayAlarm(date: LocalDate): DayAlarm? = days.firstOrNull { it.date == date }
+
+    /** Sets the alarm of one day ([minute] null turns it off); old days are dropped. */
+    fun withDay(date: LocalDate, minute: Int?, today: LocalDate): AlarmSettings =
+        copy(days = (days.filter { it.date != date && !it.date.isBefore(today.minusDays(1)) } + DayAlarm(date, minute)).sortedBy { it.date })
+
+    /** Returns the day to the working day alarm (or no alarm if it is not a working day). */
+    fun withoutDay(date: LocalDate, today: LocalDate): AlarmSettings =
+        copy(days = days.filter { it.date != date && !it.date.isBefore(today.minusDays(1)) })
+}
+
 @Serializable
 enum class VacationPayMethod {
     /** Do not calculate; the amount is entered manually. */
@@ -126,6 +244,8 @@ data class AppSettings(
     val currency: String = "₽",
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
+    val appearance: AppearanceSettings = AppearanceSettings(),
+    val alarm: AlarmSettings = AlarmSettings(),
     val calendar: CalendarSettings = CalendarSettings(),
     val absence: AbsenceRules = AbsenceRules(),
     val notifications: NotificationSettings = NotificationSettings(),

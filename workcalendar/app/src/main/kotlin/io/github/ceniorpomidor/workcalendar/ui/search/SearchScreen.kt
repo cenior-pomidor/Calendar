@@ -73,7 +73,7 @@ private fun parseDate(text: String, today: LocalDate): LocalDate? {
 @Composable
 fun SearchScreen(
     container: AppContainer,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onShift: (Long) -> Unit,
     onDate: (LocalDate) -> Unit,
     onAbsence: (Long) -> Unit,
