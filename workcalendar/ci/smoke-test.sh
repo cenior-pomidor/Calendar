@@ -14,18 +14,19 @@ adb logcat -c
 adb shell am start -W -n $PKG/.MainActivity
 sleep 8
 $UI dump onboarding-1 1 || exit 1
-$UI tap "Далее"
+# A slow emulator can lose a tap (or show "isn't responding" over the app): tap until the page changes.
+$UI tap-until "Далее" "Почасовая ставка" || exit 1
 $UI dump onboarding-rate 0 || exit 1
 $UI tap "Ставка в час"
 $UI type 350
 $UI hide-keyboard
-$UI tap "Далее"
+$UI tap-until "Далее" "График работы" || exit 1
 $UI dump onboarding-schedule 1 "График работы" || exit 1
-$UI tap "Далее"
+$UI tap-until "Далее" "Аванс и зарплата" || exit 1
 $UI dump onboarding-payouts 0 "Аванс и зарплата" || exit 1
-$UI tap "Далее"
+$UI tap-until "Далее" "Готово" || exit 1
 $UI dump onboarding-last 0 || exit 1
-$UI tap "Готово"
+$UI tap-until "Готово" "Финансы" || exit 1
 sleep 5
 # The wizard must be finished: the bottom navigation is visible.
 $UI dump calendar 1 "Финансы" || exit 1

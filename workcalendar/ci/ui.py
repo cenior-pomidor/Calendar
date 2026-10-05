@@ -195,6 +195,24 @@ def cmd_tap(text, exact="0", scroll="1"):
     print(f"!! element not found: {text}")
 
 
+def cmd_tap_until(text, expect, attempts="4"):
+    """Taps [text] until [expect] is on the screen: a slow emulator can lose a tap."""
+    for _ in range(int(attempts)):
+        root = dump_xml()
+        if root is not None and has_text(texts(root), expect):
+            print(f">> shown: {expect}")
+            return
+        cmd_tap(text, "1", "0")
+        # Let the next page appear before looking again, so that one tap is not counted twice.
+        time.sleep(3)
+    root = dump_xml()
+    if root is not None and has_text(texts(root), expect):
+        print(f">> shown: {expect}")
+        return
+    print(f"!! {expect} did not appear after tapping {text}")
+    sys.exit(5)
+
+
 def device_zone():
     return adb("shell", "getprop", "persist.sys.timezone").stdout.strip() or "UTC"
 
@@ -320,6 +338,7 @@ if __name__ == "__main__":
         "wait": cmd_wait,
         "show": cmd_show,
         "tap": cmd_tap,
+        "tap-until": cmd_tap_until,
         "type": cmd_type,
         "route": cmd_route,
         "back": cmd_back,
