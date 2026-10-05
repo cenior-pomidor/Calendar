@@ -41,33 +41,4 @@ object TimeMath {
 
     fun atMinute(date: LocalDate, minuteOfDay: Int): LocalDateTime =
         date.atStartOfDay().plusMinutes(minuteOfDay.toLong())
-
-    /**
-     * Minutes of [start, end) that fall into the nightly window [nightStart, nightEnd)
-     * (minutes of day, the window may wrap over midnight, e.g. 22:00–06:00).
-     */
-    fun nightMinutes(
-        start: LocalDateTime,
-        end: LocalDateTime,
-        nightStartMinute: Int,
-        nightEndMinute: Int,
-        zone: ZoneId,
-    ): Long {
-        if (!end.isAfter(start) || nightStartMinute == nightEndMinute) return 0
-        var total = 0L
-        // Check windows starting from the day before the shift to cover early-morning parts.
-        var day = start.toLocalDate().minusDays(1)
-        val lastDay = end.toLocalDate()
-        while (!day.isAfter(lastDay)) {
-            val windowStart = atMinute(day, nightStartMinute)
-            val windowEnd = if (nightEndMinute > nightStartMinute) {
-                atMinute(day, nightEndMinute)
-            } else {
-                atMinute(day.plusDays(1), nightEndMinute)
-            }
-            total += overlapMinutes(start, end, windowStart, windowEnd, zone)
-            day = day.plusDays(1)
-        }
-        return total
-    }
 }

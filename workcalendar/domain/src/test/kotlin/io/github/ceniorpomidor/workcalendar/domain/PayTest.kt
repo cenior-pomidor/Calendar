@@ -25,7 +25,6 @@ class PayTest {
                 id = 1,
                 effectiveFrom = date("2026-01-01"),
                 hourlyRate = Money.ofRubles(300),
-                nightBonusPercent = 20,
                 holidayBonusPercent = 100,
                 overtimeBonusPercent = 50,
                 extraShiftBonusPercent = 100,
@@ -41,11 +40,11 @@ class PayTest {
     }
 
     @Test
-    fun `night, holiday, overtime and extra surcharges`() {
+    fun `holiday, overtime and extra surcharges`() {
         val calc = TestData.payCalculator(rates = surcharges)
+        // Night hours have no surcharge.
         val night = calc.calculate(shift(1, "2026-10-05", start = "22:00", end = "06:00", breakMinutes = 0), 480)!!
-        assertEquals(480, night.nightMinutes)
-        assertEquals(Money.ofRubles(2400 + 480), night.total)
+        assertEquals(Money.ofRubles(2400), night.total)
 
         val holiday = calc.calculate(shift(2, "2026-11-04"), 480)!!
         assertEquals(480, holiday.holidayMinutes)

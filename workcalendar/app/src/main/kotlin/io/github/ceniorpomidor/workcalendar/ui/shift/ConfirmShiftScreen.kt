@@ -280,7 +280,6 @@ private fun ConfirmedSummary(shift: Shift, plannedMinutes: Int) {
 fun PayBreakdown(pay: ShiftPay) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         ValueRow("${Formats.hoursDecimal(pay.paidMinutes.toLong())} ч × ${money(pay.hourlyRate)}", money(pay.base))
-        if (!pay.nightBonus.isZero) ValueRow("Ночные ${Formats.hoursDecimal(pay.nightMinutes.toLong())} ч, +${pay.nightPercent}%", "+" + money(pay.nightBonus))
         if (!pay.holidayBonus.isZero) ValueRow("Праздничные ${Formats.hoursDecimal(pay.holidayMinutes.toLong())} ч, +${pay.holidayPercent}%", "+" + money(pay.holidayBonus))
         if (!pay.overtimeBonus.isZero) ValueRow("Сверхурочные ${Formats.hoursDecimal(pay.overtimeMinutes.toLong())} ч, +${pay.overtimePercent}%", "+" + money(pay.overtimeBonus))
         if (!pay.extraShiftBonus.isZero) ValueRow("Доплата за доп. смену +${pay.extraShiftPercent}%", "+" + money(pay.extraShiftBonus))

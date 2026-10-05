@@ -75,22 +75,19 @@ enum class ShiftDisplayState {
 data class ShiftPay(
     val hourlyRate: Money,
     val paidMinutes: Int,
-    val nightMinutes: Int = 0,
     val holidayMinutes: Int = 0,
     val overtimeMinutes: Int = 0,
     val base: Money,
-    val nightBonus: Money = Money.ZERO,
     val holidayBonus: Money = Money.ZERO,
     val overtimeBonus: Money = Money.ZERO,
     val extraShiftBonus: Money = Money.ZERO,
-    val nightPercent: Int = 0,
     val holidayPercent: Int = 0,
     val overtimePercent: Int = 0,
     val extraShiftPercent: Int = 0,
 ) {
-    val total: Money get() = base + nightBonus + holidayBonus + overtimeBonus + extraShiftBonus
+    val total: Money get() = base + holidayBonus + overtimeBonus + extraShiftBonus
 
-    val bonuses: Money get() = nightBonus + holidayBonus + overtimeBonus + extraShiftBonus
+    val bonuses: Money get() = holidayBonus + overtimeBonus + extraShiftBonus
 }
 
 @Serializable

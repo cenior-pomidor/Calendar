@@ -24,7 +24,7 @@ class PayCalculator(
     /** Hourly rate for the shift: individual rate or the rate effective on its date. */
     fun hourlyRateFor(shift: Shift): Money? = shift.hourlyRateOverride ?: rates.on(shift.date)?.hourlyRate
 
-    /** Interval of actual work used to find night and holiday hours. */
+    /** Interval of actual work used to find holiday hours. */
     fun workInterval(shift: Shift, workedMinutes: Int): Pair<LocalDateTime, LocalDateTime> {
         val actualStart = shift.actualStart
         val actualEnd = shift.actualEnd
@@ -42,26 +42,20 @@ class PayCalculator(
         val rate = shift.hourlyRateOverride ?: period?.hourlyRate ?: return null
         val worked = workedMinutes.coerceAtLeast(0)
         val (start, end) = workInterval(shift, worked)
-        val night = TimeMath.nightMinutes(start, end, NIGHT_START_MINUTE, NIGHT_END_MINUTE, zone)
-            .coerceAtMost(worked.toLong()).toInt()
         val holiday = holidayMinutes(start, end).coerceAtMost(worked.toLong()).toInt()
         val overtime = if (shift.kind == ShiftKind.REGULAR) (worked - shift.plannedPaidMinutes(zone).toInt()).coerceAtLeast(0) else 0
-        val nightPercent = period?.nightBonusPercent ?: 0
         val holidayPercent = period?.holidayBonusPercent ?: 0
         val overtimePercent = period?.overtimeBonusPercent ?: 0
         val extraPercent = if (shift.kind == ShiftKind.EXTRA) period?.extraShiftBonusPercent ?: 0 else 0
         return ShiftPay(
             hourlyRate = rate,
             paidMinutes = worked,
-            nightMinutes = night,
             holidayMinutes = holiday,
             overtimeMinutes = overtime,
             base = Money.forMinutes(worked.toLong(), rate),
-            nightBonus = Money.forMinutes(night.toLong(), rate, nightPercent),
             holidayBonus = Money.forMinutes(holiday.toLong(), rate, holidayPercent),
             overtimeBonus = Money.forMinutes(overtime.toLong(), rate, overtimePercent),
             extraShiftBonus = Money.forMinutes(worked.toLong(), rate, extraPercent),
-            nightPercent = nightPercent,
             holidayPercent = holidayPercent,
             overtimePercent = overtimePercent,
             extraShiftPercent = extraPercent,
@@ -100,11 +94,5 @@ class PayCalculator(
             day = day.plusDays(1)
         }
         return total
-    }
-
-    companion object {
-        /** Night time by the Labour Code (art. 96): 22:00-06:00. */
-        const val NIGHT_START_MINUTE: Int = 22 * 60
-        const val NIGHT_END_MINUTE: Int = 6 * 60
     }
 }

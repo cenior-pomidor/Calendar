@@ -14,17 +14,6 @@ import java.time.ZoneId
 
 class TimeAndHolidaysTest {
     @Test
-    fun `night minutes across midnight`() {
-        val zone = TestData.zone
-        // 20:00–08:00: night window 22:00–06:00 gives 8 hours.
-        assertEquals(480, TimeMath.nightMinutes(dateTime("2026-10-05T20:00"), dateTime("2026-10-06T08:00"), 22 * 60, 6 * 60, zone))
-        // 04:00–12:00 only 2 night hours.
-        assertEquals(120, TimeMath.nightMinutes(dateTime("2026-10-05T04:00"), dateTime("2026-10-05T12:00"), 22 * 60, 6 * 60, zone))
-        // Day shift has none.
-        assertEquals(0, TimeMath.nightMinutes(dateTime("2026-10-05T09:00"), dateTime("2026-10-05T18:00"), 22 * 60, 6 * 60, zone))
-    }
-
-    @Test
     fun `elapsed time respects daylight saving changes`() {
         val berlin = ZoneId.of("Europe/Berlin")
         // Night of 29.03.2026 clocks go forward: 20:00–08:00 lasts 11 real hours.

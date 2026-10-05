@@ -157,7 +157,11 @@ fun OnboardingScreen(container: AppContainer, onDone: () -> Unit) {
                         Text("Почасовая ставка", style = MaterialTheme.typography.headlineSmall)
                         Text("Заработок считается по подтверждённым часам. Ставку можно менять с любой даты, прошлые смены сохранят прежнюю.", style = MaterialTheme.typography.bodyMedium)
                         NumberField("Ставка в час", rateText, { rateText = it }, suffix = "₽", isError = rateText.isNotBlank() && rate == null)
-                        Text("Надбавки за ночь и праздники можно задать позже в Настройки → Ставки.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Надбавки за праздники и сверхурочные можно задать позже в Настройки → Ставки.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     2 -> {
                         Text("График работы", style = MaterialTheme.typography.headlineSmall)

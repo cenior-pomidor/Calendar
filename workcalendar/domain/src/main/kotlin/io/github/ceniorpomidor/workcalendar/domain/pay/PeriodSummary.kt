@@ -24,7 +24,6 @@ data class PeriodSummary(
     val pendingMinutes: Long,
     /** Minutes of extra shifts plus overtime of regular shifts (confirmed). */
     val extraMinutes: Long,
-    val nightMinutes: Long,
     val holidayMinutes: Long,
     val scheduledShifts: Int,
     val workedShifts: Int,
@@ -45,7 +44,7 @@ data class PeriodSummary(
     val plannedEarnings: Money?,
     /** Confirmed earnings plus the planned pay of shifts not yet confirmed; null when no rate is set. */
     val forecastEarnings: Money?,
-    /** Bonuses for night, holiday, overtime and extra shifts included in [confirmedEarnings]. */
+    /** Bonuses for holiday, overtime and extra shifts included in [confirmedEarnings]. */
     val surcharges: Money,
     val vacationPay: Money,
     val sickPay: Money,
@@ -80,7 +79,6 @@ class SummaryCalculator(private val pay: PayCalculator) {
         var workedMinutes = 0L
         var pendingMinutes = 0L
         var extraMinutes = 0L
-        var nightMinutes = 0L
         var holidayMinutes = 0L
         var scheduled = 0
         var worked = 0
@@ -125,7 +123,6 @@ class SummaryCalculator(private val pay: PayCalculator) {
                     if (snapshot != null) {
                         confirmed += snapshot.total
                         surcharges += snapshot.bonuses
-                        nightMinutes += snapshot.nightMinutes
                         holidayMinutes += snapshot.holidayMinutes
                         extraMinutes += if (shift.kind == ShiftKind.EXTRA) minutes else snapshot.overtimeMinutes.toLong()
                         forecast = forecast?.plus(snapshot.total)
@@ -185,7 +182,6 @@ class SummaryCalculator(private val pay: PayCalculator) {
             workedMinutes = workedMinutes,
             pendingMinutes = pendingMinutes,
             extraMinutes = extraMinutes,
-            nightMinutes = nightMinutes,
             holidayMinutes = holidayMinutes,
             scheduledShifts = scheduled,
             workedShifts = worked,

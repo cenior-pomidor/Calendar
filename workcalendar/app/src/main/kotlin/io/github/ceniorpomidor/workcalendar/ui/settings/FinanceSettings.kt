@@ -103,7 +103,6 @@ fun RatesScreen(container: AppContainer, onBack: () -> Unit) {
                 ) {
                     Text("Действует с ${Formats.date(r.effectiveFrom)}", style = MaterialTheme.typography.bodyMedium)
                     val parts = listOfNotNull(
-                        r.nightBonusPercent.takeIf { it > 0 }?.let { "ночные +$it%" },
                         r.holidayBonusPercent.takeIf { it > 0 }?.let { "праздничные +$it%" },
                         r.overtimeBonusPercent.takeIf { it > 0 }?.let { "сверхурочные +$it%" },
                         r.extraShiftBonusPercent.takeIf { it > 0 }?.let { "доп. смены +$it%" },
@@ -163,7 +162,6 @@ fun RatesScreen(container: AppContainer, onBack: () -> Unit) {
 private fun RateDialog(rate: RatePeriod, onDismiss: () -> Unit, onSave: (RatePeriod) -> Unit) {
     var date by remember { mutableStateOf(rate.effectiveFrom) }
     var rateText by remember { mutableStateOf(if (rate.hourlyRate.isZero) "" else rate.hourlyRate.toString().replace('.', ',')) }
-    var night by remember { mutableStateOf(rate.nightBonusPercent.toString()) }
     var holiday by remember { mutableStateOf(rate.holidayBonusPercent.toString()) }
     var overtime by remember { mutableStateOf(rate.overtimeBonusPercent.toString()) }
     var extra by remember { mutableStateOf(rate.extraShiftBonusPercent.toString()) }
@@ -176,14 +174,14 @@ private fun RateDialog(rate: RatePeriod, onDismiss: () -> Unit, onSave: (RatePer
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 DateField("Действует с", date, { date = it })
                 NumberField("Ставка в час", rateText, { rateText = it }, suffix = "₽", isError = rateText.isNotBlank() && parsed == null)
-                Text("Надбавки, % к часовой ставке (по ТК РФ: ночь — не менее 20%, праздник — не менее 100%, сверхурочные — 50–100%)", style = MaterialTheme.typography.bodySmall)
+                Text("Надбавки, % к часовой ставке (по ТК РФ: праздник — не менее 100%, сверхурочные — 50–100%)", style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NumberField("Ночные", night, { night = it.filter { c -> c.isDigit() } }, suffix = "%", decimal = false, modifier = Modifier.weight(1f))
                     NumberField("Праздничные", holiday, { holiday = it.filter { c -> c.isDigit() } }, suffix = "%", decimal = false, modifier = Modifier.weight(1f))
+                    NumberField("Сверхурочные", overtime, { overtime = it.filter { c -> c.isDigit() } }, suffix = "%", decimal = false, modifier = Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NumberField("Сверхурочные", overtime, { overtime = it.filter { c -> c.isDigit() } }, suffix = "%", decimal = false, modifier = Modifier.weight(1f))
                     NumberField("Доп. смены", extra, { extra = it.filter { c -> c.isDigit() } }, suffix = "%", decimal = false, modifier = Modifier.weight(1f))
+                    Spacer(Modifier.weight(1f))
                 }
                 TextInput("Комментарий", note, { note = it })
             }
@@ -196,7 +194,6 @@ private fun RateDialog(rate: RatePeriod, onDismiss: () -> Unit, onSave: (RatePer
                         rate.copy(
                             effectiveFrom = date,
                             hourlyRate = parsed ?: Money.ZERO,
-                            nightBonusPercent = night.toIntOrNull()?.coerceIn(0, 1000) ?: 0,
                             holidayBonusPercent = holiday.toIntOrNull()?.coerceIn(0, 1000) ?: 0,
                             overtimeBonusPercent = overtime.toIntOrNull()?.coerceIn(0, 1000) ?: 0,
                             extraShiftBonusPercent = extra.toIntOrNull()?.coerceIn(0, 1000) ?: 0,

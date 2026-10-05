@@ -91,7 +91,8 @@ data class RateEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val effectiveFrom: LocalDate,
     val hourlyRate: Long,
-    val nightBonusPercent: Int,
+    /** Unused: night surcharge was removed; the column is kept so the database schema stays the same. */
+    val nightBonusPercent: Int = 0,
     val holidayBonusPercent: Int,
     val overtimeBonusPercent: Int,
     val extraShiftBonusPercent: Int,

@@ -72,7 +72,6 @@ class FinanceRepository(
 
     private fun surchargeText(rate: RatePeriod): String {
         val parts = ArrayList<String>()
-        if (rate.nightBonusPercent > 0) parts += "ночные +${rate.nightBonusPercent}%"
         if (rate.holidayBonusPercent > 0) parts += "праздничные +${rate.holidayBonusPercent}%"
         if (rate.overtimeBonusPercent > 0) parts += "сверхурочные +${rate.overtimeBonusPercent}%"
         if (rate.extraShiftBonusPercent > 0) parts += "доп. смены +${rate.extraShiftBonusPercent}%"

@@ -37,7 +37,7 @@ class BackupAndExportTest {
                 shift(1, "2026-10-05", status = ShiftStatus.CONFIRMED, worked = 450).copy(pay = TestData.payCalculator().calculate(shift(1, "2026-10-05"), 450)),
                 shift(2, "2026-10-06", start = "20:00", end = "08:00"),
             ),
-            rates = listOf(RatePeriod(id = 1, effectiveFrom = date("2026-01-01"), hourlyRate = Money.ofRubles(300), nightBonusPercent = 20)),
+            rates = listOf(RatePeriod(id = 1, effectiveFrom = date("2026-01-01"), hourlyRate = Money.ofRubles(300), holidayBonusPercent = 100)),
             absences = listOf(Absence(id = 1, type = AbsenceType.VACATION, startDate = date("2026-11-09"), endDate = date("2026-11-22"), manualAmount = Money.ofRubles(40_000))),
             payoutRules = listOf(PayoutRule.defaultAdvance().copy(id = 1), PayoutRule.defaultSalary().copy(id = 2)),
         )

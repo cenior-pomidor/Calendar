@@ -268,7 +268,7 @@ private fun HeroCard(summary: PeriodSummary, previous: PeriodSummary?) {
 private fun AccrualsCard(s: PeriodSummary) {
     SectionCard(title = "Начисления", icon = AppIcons.Payments) {
         ValueRow("Работа (подтверждённые часы)", money(s.confirmedEarnings))
-        if (!s.surcharges.isZero) ValueRow("  в т.ч. надбавки (ночь, праздники, сверхурочные)", money(s.surcharges))
+        if (!s.surcharges.isZero) ValueRow("  в т.ч. надбавки (праздники, сверхурочные, доп. смены)", money(s.surcharges))
         if (!s.vacationPay.isZero || s.vacationDays > 0) ValueRow("Отпускные", money(s.vacationPay))
         if (!s.sickPay.isZero || s.sickDays > 0) ValueRow("Больничные", money(s.sickPay))
         if (!s.otherAbsencePay.isZero) ValueRow("Другие отсутствия", money(s.otherAbsencePay))
@@ -287,7 +287,6 @@ private fun HoursCard(s: PeriodSummary) {
     SectionCard(title = "Часы и смены", icon = AppIcons.Schedule) {
         ValueRow("Отработано / по плану", "${Formats.hours(s.workedMinutes)} / ${Formats.hours(s.plannedMinutes)}", emphasize = true)
         if (s.extraMinutes > 0) ValueRow("Дополнительные и сверхурочные", Formats.hours(s.extraMinutes))
-        if (s.nightMinutes > 0) ValueRow("Ночные", Formats.hours(s.nightMinutes))
         if (s.holidayMinutes > 0) ValueRow("Праздничные", Formats.hours(s.holidayMinutes))
         ValueRow("Смены: отработано", "${s.workedShifts} из ${s.scheduledShifts}")
         if (s.extraShifts > 0) ValueRow("  в т.ч. дополнительных", s.extraShifts.toString())

@@ -9,15 +9,13 @@ import java.time.LocalDate
 
 /**
  * Hourly rate and surcharges effective from [effectiveFrom] until the next period starts.
- * Surcharges are additional percents of the hourly rate (e.g. 20 = +20% for night hours,
- * 100 = double pay for holiday hours).
+ * Surcharges are additional percents of the hourly rate (e.g. 100 = double pay for holiday hours).
  */
 @Serializable
 data class RatePeriod(
     val id: Long = 0,
     val effectiveFrom: LocalDate,
     val hourlyRate: Money,
-    val nightBonusPercent: Int = 0,
     val holidayBonusPercent: Int = 0,
     val overtimeBonusPercent: Int = 0,
     val extraShiftBonusPercent: Int = 0,
