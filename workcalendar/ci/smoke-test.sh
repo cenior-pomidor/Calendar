@@ -98,7 +98,7 @@ $UI tap "Настройки" 1
 $UI route "settings"
 $UI dump settings 1 || exit 1
 $UI route "settings/templates"
-$UI dump templates 0 || exit 1
+$UI dump templates 1 || exit 1
 $UI route "settings/rates"
 $UI dump rates 0 || exit 1
 $UI route "settings/payouts"
@@ -137,8 +137,9 @@ $UI tap "Добавить" 1
 $UI dump alarm-new 0 "Новый будильник" || exit 1
 $UI tap "Сохранить" 1
 sleep 2
-$UI show "Ближайшие звонки"
-$UI dump alarm-on 1 "Ближайшие звонки" "06:30 ·" "07:30 ·" || exit 1
+# Rings are listed by time, two per working day: when the second is visible, so is the first.
+$UI show "07:30 ·"
+$UI dump alarm-on 1 "06:30 ·" "07:30 ·" || exit 1
 SATURDAY=$(python3 -c "import datetime
 d = datetime.date.today() + datetime.timedelta(days=1)
 while d.weekday() != 5:

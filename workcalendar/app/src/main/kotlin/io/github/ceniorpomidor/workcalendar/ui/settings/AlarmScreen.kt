@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,9 +90,6 @@ fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> U
                 Icon(AppIcons.Schedule, contentDescription = "Будильники «Часов»")
             }
         },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { onEdit(0) }, icon = { Icon(AppIcons.AlarmAdd, contentDescription = null) }, text = { Text("Добавить") })
-        },
     ) { padding ->
         ScrollColumn(padding) {
             if (!canPost) {
@@ -161,14 +157,27 @@ fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> U
             val items = alarm.items.filter { it.repeat != AlarmRepeat.ONCE || it.date?.isBefore(today) != true }
             if (items.isEmpty()) {
                 EmptyState(AppIcons.Alarm, "Будильников нет", "Например, будильник перед каждой сменой по графику") {
-                    Button(onClick = {
-                        change("Будильник заведён") {
-                            it.save(AlarmItem(repeat = AlarmRepeat.WORK_DAYS, minutesBefore = AlarmItem.DEFAULT_MINUTES_BEFORE))
-                        }
-                    }) { Text("Перед каждой сменой") }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            change("Будильник заведён") {
+                                it.save(AlarmItem(repeat = AlarmRepeat.WORK_DAYS, minutesBefore = AlarmItem.DEFAULT_MINUTES_BEFORE))
+                            }
+                        }) { Text("Перед каждой сменой") }
+                        OutlinedButton(onClick = { onEdit(0) }) { Text("Другой будильник") }
+                    }
                 }
             } else {
-                SectionCard(title = "Будильники", icon = AppIcons.Alarm) {
+                SectionCard(
+                    title = "Будильники",
+                    icon = AppIcons.Alarm,
+                    action = {
+                        TextButton(onClick = { onEdit(0) }) {
+                            Icon(AppIcons.AlarmAdd, contentDescription = null)
+                            Spacer(Modifier.padding(start = 6.dp))
+                            Text("Добавить")
+                        }
+                    },
+                ) {
                     for (item in items.sortedWith(compareBy({ it.repeat }, { it.minutesBefore == null }, { it.minutesBefore }, { it.date }, { it.minute }))) {
                         AlarmItemRow(item, onClick = { onEdit(item.id) }, onEnabled = { on -> change { it.setEnabled(item.id, on) } })
                     }
@@ -223,7 +232,7 @@ fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> U
                     Text("Проверить будильник")
                 }
             }
-            Spacer(Modifier.padding(bottom = 72.dp))
+            Spacer(Modifier.padding(bottom = 16.dp))
         }
     }
 }
