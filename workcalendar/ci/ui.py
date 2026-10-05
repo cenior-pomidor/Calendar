@@ -285,17 +285,19 @@ def cmd_type(text):
 
 
 def cmd_show(text, attempts="6"):
-    """Scrolls the screen (from the bottom part, where the day panel is) until [text] is visible."""
+    """Scrolls down, then up (from the bottom part, where the day panel is) until [text] is visible."""
     size = adb("shell", "wm", "size").stdout
     m = re.search(r"(\d+)x(\d+)", size)
     w, h = (int(m.group(1)), int(m.group(2))) if m else (1080, 2400)
-    for _ in range(int(attempts)):
-        root = dump_xml()
-        if root is not None and has_text(texts(root), text):
-            print(f">> visible: {text}")
-            return
-        adb("shell", "input", "swipe", str(w // 2), str(h * 88 // 100), str(w // 2), str(h * 50 // 100), "500")
-        time.sleep(1.2)
+    for down in (True, False):
+        for _ in range(int(attempts)):
+            root = dump_xml()
+            if root is not None and has_text(texts(root), text):
+                print(f">> visible: {text}")
+                return
+            start, end = (h * 88 // 100, h * 50 // 100) if down else (h * 50 // 100, h * 88 // 100)
+            adb("shell", "input", "swipe", str(w // 2), str(start), str(w // 2), str(end), "500")
+            time.sleep(1.2)
     print(f"!! not visible after scrolling: {text}")
 
 
