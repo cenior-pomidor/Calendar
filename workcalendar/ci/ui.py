@@ -284,6 +284,21 @@ def cmd_type(text):
     time.sleep(0.5)
 
 
+def cmd_show(text, attempts="6"):
+    """Scrolls the screen (from the bottom part, where the day panel is) until [text] is visible."""
+    size = adb("shell", "wm", "size").stdout
+    m = re.search(r"(\d+)x(\d+)", size)
+    w, h = (int(m.group(1)), int(m.group(2))) if m else (1080, 2400)
+    for _ in range(int(attempts)):
+        root = dump_xml()
+        if root is not None and has_text(texts(root), text):
+            print(f">> visible: {text}")
+            return
+        adb("shell", "input", "swipe", str(w // 2), str(h * 88 // 100), str(w // 2), str(h * 50 // 100), "500")
+        time.sleep(1.2)
+    print(f"!! not visible after scrolling: {text}")
+
+
 def cmd_route(route):
     # The command line is run by the device shell: quote the route ("&" would end the command).
     adb("shell", f"am start -n {PKG}/.MainActivity -a android.intent.action.VIEW --es route {shlex.quote(route)}")
@@ -301,6 +316,7 @@ if __name__ == "__main__":
     {
         "dump": cmd_dump,
         "wait": cmd_wait,
+        "show": cmd_show,
         "tap": cmd_tap,
         "type": cmd_type,
         "route": cmd_route,

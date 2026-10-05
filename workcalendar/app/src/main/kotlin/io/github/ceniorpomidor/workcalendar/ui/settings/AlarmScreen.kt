@@ -174,37 +174,6 @@ fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> U
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            SectionCard(title = "Звонок", icon = AppIcons.NotificationsActive) {
-                Text("Отложить на", style = MaterialTheme.typography.bodyMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(5, 10, 15, 20, 30).forEach { m ->
-                        FilterChip(selected = alarm.snoozeMinutes == m, onClick = { change { it.copy(snoozeMinutes = m) } }, label = { Text("$m мин") })
-                    }
-                }
-                Text("Звонит не дольше", style = MaterialTheme.typography.bodyMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(1, 5, 10, 15, 30).forEach { m ->
-                        FilterChip(selected = alarm.ringMinutes == m, onClick = { change { it.copy(ringMinutes = m) } }, label = { Text("$m мин") })
-                    }
-                }
-                SettingRow(
-                    "Мелодия и вибрация",
-                    "Системные настройки звука будильника. Громкость — как у будильника телефона",
-                    AppIcons.Tune,
-                    onClick = {
-                        runCatching {
-                            context.startActivity(
-                                Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-                                    .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                    .putExtra(Settings.EXTRA_CHANNEL_ID, Notifications.CHANNEL_ALARM),
-                            )
-                        }
-                    },
-                )
-                OutlinedButton(onClick = { scope.launchSafely(snackbar) { container.wakeAlarms.test() } }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Проверить будильник")
-                }
-            }
             SectionCard(title = "Ближайшие будильники", icon = AppIcons.Event) {
                 if (upcoming.isEmpty()) {
                     Text(
@@ -240,6 +209,37 @@ fun AlarmScreen(container: AppContainer, settings: AppSettings, onBack: (() -> U
                             TextButton(onClick = { change { it.withoutDay(day.date, today) } }) { Text("Вернуть") }
                         }
                     }
+                }
+            }
+            SectionCard(title = "Звонок", icon = AppIcons.NotificationsActive) {
+                Text("Отложить на", style = MaterialTheme.typography.bodyMedium)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(5, 10, 15, 20, 30).forEach { m ->
+                        FilterChip(selected = alarm.snoozeMinutes == m, onClick = { change { it.copy(snoozeMinutes = m) } }, label = { Text("$m мин") })
+                    }
+                }
+                Text("Звонит не дольше", style = MaterialTheme.typography.bodyMedium)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(1, 5, 10, 15, 30).forEach { m ->
+                        FilterChip(selected = alarm.ringMinutes == m, onClick = { change { it.copy(ringMinutes = m) } }, label = { Text("$m мин") })
+                    }
+                }
+                SettingRow(
+                    "Мелодия и вибрация",
+                    "Системные настройки звука будильника. Громкость — как у будильника телефона",
+                    AppIcons.Tune,
+                    onClick = {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                                    .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                    .putExtra(Settings.EXTRA_CHANNEL_ID, Notifications.CHANNEL_ALARM),
+                            )
+                        }
+                    },
+                )
+                OutlinedButton(onClick = { scope.launchSafely(snackbar) { container.wakeAlarms.test() } }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Проверить будильник")
                 }
             }
         }

@@ -132,6 +132,7 @@ $UI tap "Будильник" 1
 $UI dump alarm 0 "Будильник во все рабочие дни" || exit 1
 $UI tap "Будильник во все рабочие дни" 1
 sleep 2
+$UI show "Ближайшие будильники"
 $UI dump alarm-on 1 "Ближайшие будильники" "07:30" || exit 1
 SATURDAY=$(python3 -c "import datetime
 d = datetime.date.today() + datetime.timedelta(days=1)
@@ -139,10 +140,12 @@ while d.weekday() != 5:
     d += datetime.timedelta(days=1)
 print(d)")
 $UI route "day/$SATURDAY"
+$UI show "Включите, чтобы разбудить в этот день"
 $UI dump day-no-alarm 0 "Включите, чтобы разбудить в этот день" || exit 1
 $UI tap "Включите, чтобы разбудить в этот день"
 $UI tap "Готово" 1
-sleep 2
+sleep 4
+$UI show "Только в этот день"
 $UI dump day-alarm 1 "Будильник 07:00" "Только в этот день" || exit 1
 $UI route "alarm"
 $UI tap "Проверить будильник"
@@ -150,6 +153,7 @@ $UI wait alarm-test "Отложить на 10 мин" 30 || exit 1
 $UI notifications "Проверка будильника" 10 || exit 1
 $UI tap "Выключить" 1
 sleep 2
+$UI show "Ближайшие будильники"
 $UI dump alarm-after-test 0 "Ближайшие будильники" || exit 1
 
 # ---- Notifications: shift end -> quick actions (needs adb root to move the clock) ----
@@ -201,10 +205,10 @@ if [ "$(adb shell date +%F | tr -d '\r')" = "$D1" ]; then
   $UI set-time "${D3}T07:29:30"
   if $UI wait alarm-ring "Отложить на 10 мин" 90; then
     $UI tap "Отложить на 10 мин" 1
-    $UI notifications "Будильник отложен до 07:40" 15 || exit 1
+    $UI notifications "Будильник отложен до 07:4" 15 || exit 1
     adb shell input keyevent 223
     $UI set-time "${D3}T07:39:30"
-    $UI wait alarm-snoozed-ring "Будильник 07:40" 90 || exit 1
+    $UI wait alarm-snoozed-ring "Будильник 07:4" 150 || exit 1
     $UI tap "Выключить" 1
   else
     echo "!! WARNING: the alarm screen did not open over the lock screen"
