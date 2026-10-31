@@ -50,6 +50,13 @@ print(t.day, names[t.month - 1])"
 next_weekday() {
   python3 -c "import datetime,sys
 fixed = {(1, d) for d in range(1, 9)} | {(2, 23), (3, 8), (5, 1), (5, 9), (6, 12), (11, 4)}
+transfers = {'2026-01-09', '2026-03-09', '2026-05-11', '2026-12-31', '2027-02-22', '2027-05-03', '2027-05-10',
+             '2027-06-14', '2027-11-05', '2027-12-31'}
+d = datetime.date.fromisoformat(sys.argv[1]) + datetime.timedelta(days=1)
+while d.weekday() >= 5 or (d.month, d.day) in fixed or d.isoformat() in transfers:
+    d += datetime.timedelta(days=1)
+print(d)" "$1"
+}
 # `input swipe` waits until the app has handled each event: while the app is still busy after the
 # setup wizard (generating the schedule), a quick swipe can turn into a plain touch without moves.
 # Let it settle first and log how long the swipe command takes.
@@ -202,13 +209,6 @@ $UI route "day/$CUT"
 $UI dump cut-restored 1 "09:00–18:00" || exit 1
 
 # ---- Notifications: shift end -> quick actions (needs adb root to move the clock) ----
-transfers = {'2026-01-09', '2026-03-09', '2026-05-11', '2026-12-31', '2027-02-22', '2027-05-03', '2027-05-10',
-             '2027-06-14', '2027-11-05', '2027-12-31'}
-d = datetime.date.fromisoformat(sys.argv[1]) + datetime.timedelta(days=1)
-while d.weekday() >= 5 or (d.month, d.day) in fixed or d.isoformat() in transfers:
-    d += datetime.timedelta(days=1)
-print(d)" "$1"
-}
 echo "===== ALARMS ====="
 adb shell dumpsys alarm | grep -A2 "Alarm{.*$PKG" | grep -E "Alarm\{|origWhen=" | head -20
 adb root > /dev/null 2>&1 || true
@@ -277,4 +277,11 @@ if adb logcat -d -b crash | grep -q "FATAL EXCEPTION"; then
   echo "App crashed"
   exit 1
 fi
+# Guard against a script that silently skipped its steps: the key screens must have been visited.
+for screen in swipe-slow finance-forecast day-edit cut-restored alarm-test day-after-reply alarm-snoozed-ring; do
+  if [ ! -f "smoke/$screen.png" ]; then
+    echo "!! step was not reached: $screen"
+    exit 1
+  fi
+done
 echo "SMOKE TEST PASSED"
