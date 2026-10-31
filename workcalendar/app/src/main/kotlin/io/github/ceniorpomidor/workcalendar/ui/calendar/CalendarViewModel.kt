@@ -8,11 +8,15 @@ import io.github.ceniorpomidor.workcalendar.data.repo.CalcContext
 import io.github.ceniorpomidor.workcalendar.domain.model.Absence
 import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
 import io.github.ceniorpomidor.workcalendar.domain.model.AppSettings
+import io.github.ceniorpomidor.workcalendar.domain.model.ManualAccrual
 import io.github.ceniorpomidor.workcalendar.domain.model.Money
+import io.github.ceniorpomidor.workcalendar.domain.model.Payment
+import io.github.ceniorpomidor.workcalendar.domain.model.PayoutRule
 import io.github.ceniorpomidor.workcalendar.domain.model.Shift
 import io.github.ceniorpomidor.workcalendar.domain.model.ShiftDisplayState
 import io.github.ceniorpomidor.workcalendar.domain.model.ShiftKind
 import io.github.ceniorpomidor.workcalendar.domain.model.ShiftStatus
+import io.github.ceniorpomidor.workcalendar.domain.pay.PayoutInstance
 import io.github.ceniorpomidor.workcalendar.domain.pay.PeriodSummary
 import io.github.ceniorpomidor.workcalendar.domain.time.DateRange
 import io.github.ceniorpomidor.workcalendar.domain.util.Formats
@@ -61,6 +65,8 @@ data class DayInfo(
     val lines: List<String>,
     val earned: Money?,
     val hasExtra: Boolean,
+    /** Advances and salaries paid on this day. */
+    val payouts: List<PayoutInstance> = emptyList(),
 )
 
 data class CalendarUiState(
@@ -89,15 +95,22 @@ class CalendarViewModel(private val c: AppContainer) : ViewModel() {
 
     private val unconfirmed: Flow<Int> = ticker.flatMapLatest { now -> c.shifts.observeUnconfirmed(now).map { it.size } }
 
+    private val payoutInputs: Flow<PayoutInputs> = combine(c.finance.rules, c.finance.accruals, c.finance.payments) { rules, accruals, payments ->
+        PayoutInputs(rules, accruals, payments)
+    }
+
     val state: StateFlow<CalendarUiState> = month.flatMapLatest { m ->
         val range = DateRange(m.minusMonths(1).atDay(1), m.plusMonths(1).atEndOfMonth())
+        // Salaries paid in the first loaded month are for the month before it.
+        val shiftRange = DateRange(m.minusMonths(2).atDay(1), range.endInclusive)
         combine(
-            c.shifts.observeRange(range),
+            c.shifts.observeRange(shiftRange),
             c.absences.observeRange(range),
             c.db.miscDao().observeNotes(range.start, range.endInclusive),
             c.calc.context,
             ticker,
-        ) { shifts, absences, notes, calc, now -> build(m, range, shifts, absences, notes, calc, now) }
+        ) { shifts, absences, notes, calc, now -> Loaded(shifts, absences, notes, calc, now) }
+            .combine(payoutInputs) { d, p -> build(m, range, d, p) }
     }.combine(unconfirmed) { s, count -> s.copy(unconfirmedTotal = count) }
         .combine(c.schedule.assignments) { s, assignments -> s.copy(hasSchedule = assignments.isNotEmpty() || s.days.values.any { it.shifts.isNotEmpty() }) }
         .flowOn(Dispatchers.Default)
@@ -146,23 +159,30 @@ class CalendarViewModel(private val c: AppContainer) : ViewModel() {
         }
     }
 
-    private fun build(
-        m: YearMonth,
-        range: DateRange,
-        shifts: List<Shift>,
-        absences: List<Absence>,
-        notes: List<DayNoteEntity>,
-        calc: CalcContext,
-        now: LocalDateTime,
-    ): CalendarUiState {
+    private class Loaded(
+        val shifts: List<Shift>,
+        val absences: List<Absence>,
+        val notes: List<DayNoteEntity>,
+        val calc: CalcContext,
+        val now: LocalDateTime,
+    )
+
+    private class PayoutInputs(val rules: List<PayoutRule>, val accruals: List<ManualAccrual>, val payments: List<Payment>)
+
+    private fun build(m: YearMonth, range: DateRange, d: Loaded, p: PayoutInputs): CalendarUiState {
+        val calc = d.calc
+        val now = d.now
+        val shifts = d.shifts
+        val absences = d.absences
         val settings = calc.settings
         val byDate = shifts.filter { it.isVisible }.groupBy { it.date }
-        val notesByDate = notes.associateBy { it.date }
+        val notesByDate = d.notes.associateBy { it.date }
+        val payouts = calc.payouts.between(range.start, range.endInclusive, p.rules, shifts, p.accruals, p.payments, now).groupBy { it.payDate }
         val days = HashMap<LocalDate, DayInfo>()
         for (date in range) {
             val dayShifts = byDate[date].orEmpty().sortedBy { it.plannedStart }
             val absence = absences.firstOrNull { date in it.range }
-            days[date] = dayInfo(date, dayShifts, absence, notesByDate[date]?.text, calc, now)
+            days[date] = dayInfo(date, dayShifts, absence, notesByDate[date]?.text, calc, now).copy(payouts = payouts[date].orEmpty())
         }
         val summaries = listOf(m.minusMonths(1), m, m.plusMonths(1)).associateWith { month ->
             calc.summaries.summarize(DateRange.month(month), shifts, absences, emptyList(), now)

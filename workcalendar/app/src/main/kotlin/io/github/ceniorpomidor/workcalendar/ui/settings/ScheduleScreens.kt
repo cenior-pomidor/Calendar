@@ -98,7 +98,7 @@ fun specText(spec: ShiftSpec): String {
 }
 
 @Composable
-fun TemplatesScreen(container: AppContainer, onBack: (() -> Unit)?, onEdit: (Long) -> Unit, onApply: (Long) -> Unit) {
+fun TemplatesScreen(container: AppContainer, onBack: (() -> Unit)?, onEdit: (Long) -> Unit, onApply: (Long) -> Unit, from: LocalDate? = null) {
     val templates by container.schedule.templates.collectAsStateWithLifecycle(initialValue = emptyList())
     val assignments by container.schedule.assignments.collectAsStateWithLifecycle(initialValue = emptyList())
     val snackbar = LocalSnackbar.current
@@ -113,6 +113,13 @@ fun TemplatesScreen(container: AppContainer, onBack: (() -> Unit)?, onEdit: (Lon
         },
     ) { padding ->
         ScrollColumn(padding) {
+            if (from != null) {
+                Banner(
+                    "Новый график с ${Formats.date(from)}: нажмите «Применить» у нужного шаблона или создайте новый. " +
+                        "Смены до этой даты не изменятся, с неё — заменятся новым графиком.",
+                    BannerKind.INFO,
+                )
+            }
             Text(
                 "Шаблон описывает типовой график. После применения календарь заполняется сменами автоматически. Изменение шаблона не меняет календарь, пока вы снова не примените его.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -428,7 +435,7 @@ private fun DayEditor(label: String, day: DayDraft, onChange: (DayDraft) -> Unit
 
 /** Preview and application of a template to the calendar. */
 @Composable
-fun ApplyScheduleScreen(container: AppContainer, templateId: Long, onDone: () -> Unit) {
+fun ApplyScheduleScreen(container: AppContainer, templateId: Long, onDone: () -> Unit, from: LocalDate? = null) {
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
     val settings by container.settings.settings.collectAsStateWithLifecycle(initialValue = null)
@@ -446,7 +453,7 @@ fun ApplyScheduleScreen(container: AppContainer, templateId: Long, onDone: () ->
     LaunchedEffect(settings) {
         val s = settings ?: return@LaunchedEffect
         if (start == null) {
-            start = when (s.schedule.applyFromDefault) {
+            start = from ?: when (s.schedule.applyFromDefault) {
                 ApplyFromDefault.TODAY -> today
                 ApplyFromDefault.TOMORROW -> today.plusDays(1)
                 ApplyFromDefault.NEXT_MONTH -> YearMonth.from(today).plusMonths(1).atDay(1)

@@ -15,6 +15,7 @@ import io.github.ceniorpomidor.workcalendar.domain.schedule.AssignmentTimeline
 import io.github.ceniorpomidor.workcalendar.domain.schedule.ChangeType
 import io.github.ceniorpomidor.workcalendar.domain.schedule.RegenerationPlan
 import io.github.ceniorpomidor.workcalendar.domain.schedule.RegenerationPlanner
+import io.github.ceniorpomidor.workcalendar.domain.schedule.ScheduleCut
 import io.github.ceniorpomidor.workcalendar.domain.schedule.TimelineChange
 import io.github.ceniorpomidor.workcalendar.domain.time.DateRange
 import io.github.ceniorpomidor.workcalendar.domain.util.Formats
@@ -202,6 +203,44 @@ class ScheduleRepository(
         }
         log.log(ChangeCategory.SCHEDULE, "График отменён", "«${assignment.templateName}» с ${Formats.date(assignment.startDate)}", assignment.id)
         changes.notifyChanged()
+    }
+
+    private suspend fun shiftsFrom(date: LocalDate): List<Shift> {
+        val last = db.shiftDao().lastTemplateDate()?.let { maxOf(it, date) } ?: date
+        return db.shiftDao().getRange(date, last.plusYears(1)).map { it.toDomain() }
+    }
+
+    /** What [stopFrom] would do, for the confirmation. */
+    suspend fun previewStop(date: LocalDate, includeManual: Boolean): ScheduleCut =
+        ScheduleCut.plan(getAssignments(), shiftsFrom(date), date, includeManual)
+
+    /** Extra and manual planned shifts from [date]. */
+    suspend fun manualShiftsFrom(date: LocalDate): Int = ScheduleCut.manualCount(shiftsFrom(date), date)
+
+    /**
+     * Stops the applied schedules from [date] and deletes their shifts from this day on (extra and
+     * manual ones too when [includeManual]), so that a new schedule can be applied. Shifts with
+     * entered hours stay.
+     */
+    suspend fun stopFrom(date: LocalDate, includeManual: Boolean): ScheduleCut {
+        val cut = generationMutex.withLock {
+            val plan = ScheduleCut.plan(getAssignments(), shiftsFrom(date), date, includeManual)
+            db.withTransaction {
+                val dao = db.scheduleDao()
+                plan.removed.forEach { dao.deleteAssignment(it.id) }
+                plan.ended.forEach { dao.updateAssignment(it.toEntity()) }
+                val ids = plan.deleted.map { it.id }
+                if (ids.isNotEmpty()) db.shiftDao().deleteByIds(ids)
+            }
+            plan
+        }
+        log.log(
+            ChangeCategory.SCHEDULE,
+            "График остановлен",
+            "С ${Formats.date(date)} удалено смен: ${cut.deleted.size}" + if (includeManual) " (включая ручные)" else "",
+        )
+        changes.notifyChanged()
+        return cut
     }
 
     companion object {

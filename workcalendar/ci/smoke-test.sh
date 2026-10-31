@@ -110,7 +110,7 @@ $UI dump absence 1 || exit 1
 $UI tap "Сохранить" 1
 sleep 2
 $UI route "day/$VACATION"
-$UI dump vacation-day 1 "Сумма" || exit 1
+$UI dump vacation-day 1 "Отпуск" || exit 1
 $UI route "settings/backup"
 $UI dump backup 0 || exit 1
 $UI route "settings/notifications"
@@ -146,13 +146,15 @@ while d.weekday() != 5:
     d += datetime.timedelta(days=1)
 print(d)")
 $UI route "day/$SATURDAY"
-$UI show "Будильник на этот день"
+# The day panel has two buttons; "Изменить" lists what can be changed for the day.
+$UI tap "Изменить" 1
+$UI dump day-edit 1 "Новый график с этого дня" || exit 1
+$UI tap "Не заведён" 1
 $UI tap "Будильник на этот день"
 $UI dump alarm-day-new 0 "Новый будильник" || exit 1
 $UI tap "Сохранить" 1
 sleep 4
-$UI show "Только в этот день"
-$UI dump day-alarm 1 "Будильник 07:00" "Только в этот день" || exit 1
+$UI dump day-alarm 1 "07:00" "Изменить" "Отметить" || exit 1
 $UI route "alarm"
 $UI tap "Проверить будильник"
 $UI wait alarm-test "Отложить на 10 мин" 30 || exit 1
@@ -161,6 +163,31 @@ $UI tap "Выключить" 1
 sleep 2
 $UI show "Ближайшие звонки"
 $UI dump alarm-after-test 0 "Ближайшие звонки" || exit 1
+
+# ---- Schedule: stop it from a working day, then apply a new one from the same day ----
+CUT=$(python3 -c "import datetime
+d = datetime.date.today() + datetime.timedelta(days=45)
+while d.weekday() >= 5:
+    d += datetime.timedelta(days=1)
+print(d)")
+CUT_RU=$(python3 -c "import datetime,sys; print(datetime.date.fromisoformat(sys.argv[1]).strftime('%d.%m.%Y'))" "$CUT")
+$UI route "day/$CUT"
+$UI dump cut-day 0 "09:00–18:00" || exit 1
+$UI tap "Изменить" 1
+$UI tap "Удалить смены с этого дня"
+$UI dump cut-confirm 0 "Удалить смены с $CUT_RU?" || exit 1
+$UI tap "Удалить" 1
+sleep 3
+$UI dump cut-done 1 "Выходной" || exit 1
+$UI tap "Изменить" 1
+$UI tap "Новый график с этого дня"
+$UI dump new-schedule 0 "Новый график с $CUT_RU" || exit 1
+$UI tap "Применить" 1
+$UI dump apply-from 0 "$CUT_RU" || exit 1
+$UI tap "Применить" 1
+sleep 3
+$UI route "day/$CUT"
+$UI dump cut-restored 1 "09:00–18:00" || exit 1
 
 # ---- Notifications: shift end -> quick actions (needs adb root to move the clock) ----
 next_weekday() {

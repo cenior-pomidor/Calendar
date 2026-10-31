@@ -112,6 +112,10 @@ data class StatusPalette(
     val holiday: Color,
     val positive: Color,
     val negative: Color,
+    /** Day of an advance or salary payment. */
+    val payday: Color,
+    val onPayday: Color,
+    val paydayAccent: Color,
 )
 
 val LightStatus = StatusPalette(
@@ -138,6 +142,9 @@ val LightStatus = StatusPalette(
     holiday = Color(0xFFD0453C),
     positive = Color(0xFF2E7D45),
     negative = Color(0xFFC62828),
+    payday = Color(0xFFFFE9A8),
+    onPayday = Color(0xFF6B4E00),
+    paydayAccent = Color(0xFFE0A100),
 )
 
 val DarkStatus = StatusPalette(
@@ -164,6 +171,9 @@ val DarkStatus = StatusPalette(
     holiday = Color(0xFFFF8A80),
     positive = Color(0xFF7BD893),
     negative = Color(0xFFFF8A80),
+    payday = Color(0xFF4D3B00),
+    onPayday = Color(0xFFFFDF8A),
+    paydayAccent = Color(0xFFFFC83D),
 )
 
 val LocalStatusPalette = staticCompositionLocalOf { LightStatus }

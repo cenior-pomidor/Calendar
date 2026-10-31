@@ -4,7 +4,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -25,7 +23,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,12 +53,10 @@ import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
 import io.github.ceniorpomidor.workcalendar.domain.model.AlarmItem
 import io.github.ceniorpomidor.workcalendar.domain.model.AlarmRepeat
 import io.github.ceniorpomidor.workcalendar.domain.model.AlarmSettings
-import io.github.ceniorpomidor.workcalendar.domain.model.Shift
+import io.github.ceniorpomidor.workcalendar.domain.model.ShiftStatus
 import io.github.ceniorpomidor.workcalendar.domain.pay.PeriodSummary
 import io.github.ceniorpomidor.workcalendar.domain.time.TimeMath
 import io.github.ceniorpomidor.workcalendar.domain.util.Formats
-import io.github.ceniorpomidor.workcalendar.ui.components.Banner
-import io.github.ceniorpomidor.workcalendar.ui.components.BannerKind
 import io.github.ceniorpomidor.workcalendar.ui.components.LocalSnackbar
 import io.github.ceniorpomidor.workcalendar.ui.components.launchSafely
 import io.github.ceniorpomidor.workcalendar.ui.components.money
@@ -94,6 +89,8 @@ fun CalendarScreen(
     onSetupSchedule: () -> Unit,
     onEditAlarm: (Long) -> Unit,
     onAddAlarm: (LocalDate, Int) -> Unit,
+    onOpenPayout: (String) -> Unit,
+    onNewScheduleFrom: (LocalDate) -> Unit,
 ) {
     val vm: CalendarViewModel = viewModel { CalendarViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -158,11 +155,8 @@ fun CalendarScreen(
         dayAlarmsUi(container, state.settings.alarm, selected, dayInfo, today, scope, snackbar, onEditAlarm, onAddAlarm)
     }
 
+    var editing by rememberSaveable { mutableStateOf(false) }
     val actions = ShiftActions(
-        confirm = { onConfirmShift(it.id) },
-        confirmFull = { shift: Shift ->
-            scope.launchSafely(snackbar, success = "Часы сохранены") { container.shifts.confirmAsPlanned(shift.id) }
-        },
         edit = { onEditShift(it.id) },
         move = { shift, date -> scope.launchSafely(snackbar, success = "Смена перенесена на ${Formats.shortDate(date)}") { container.shifts.move(shift.id, date) } },
         cancel = { scope.launchSafely(snackbar, success = "Смена отменена") { container.shifts.cancel(it.id) } },
@@ -170,6 +164,29 @@ fun CalendarScreen(
         delete = { scope.launchSafely(snackbar, success = "Смена удалена") { container.shifts.delete(it.id) } },
         missed = { scope.launchSafely(snackbar) { container.shifts.markMissed(it.id) } },
     )
+    val editActions = DayEditActions(
+        addShift = { extra -> onNewShift(selected, extra) },
+        addAbsence = { type -> onNewAbsence(type, selected) },
+        openAbsence = { onOpenAbsence(it.id) },
+        saveNote = { text -> scope.launchSafely(snackbar) { vm.saveNote(selected, text) } },
+        shift = actions,
+        newScheduleFrom = onNewScheduleFrom,
+        previewStop = { date, manual -> container.schedule.previewStop(date, manual) },
+        manualShiftsFrom = { container.schedule.manualShiftsFrom(it) },
+        stopFrom = { date, manual ->
+            scope.launchSafely(snackbar, success = "Смены с ${Formats.shortDate(date)} удалены") { container.schedule.stopFrom(date, manual) }
+        },
+    )
+    // "Отметить": hours of the shift of the day, otherwise the list of shifts without hours.
+    val markShift = dayInfo?.mainShift()?.takeIf { it.status == ShiftStatus.PLANNED || it.isClosed }
+    val markAwaiting = markShift?.status == ShiftStatus.PLANNED && !state.now.isBefore(markShift.plannedEnd)
+    val markLabel = when {
+        markShift?.isClosed == true -> "Исправить"
+        markShift != null -> "Отметить"
+        state.unconfirmedTotal > 0 -> "Отметить (${state.unconfirmedTotal})"
+        else -> "Отметить"
+    }
+    val otherUnconfirmed = if (markShift != null) state.unconfirmedTotal - (if (markAwaiting) 1 else 0) else 0
 
     Scaffold(
         topBar = {
@@ -222,39 +239,27 @@ fun CalendarScreen(
                 )
             }
         }
-        // Everything that can change its height lives below the calendar, in its own scrolling area:
-        // the calendar never moves while months are swiped, and vertical scrolling cannot catch the swipe.
-        val details: @Composable ColumnScope.() -> Unit = {
-            if (!state.loading && !state.hasSchedule) {
-                Banner(
-                    "График работы не настроен. Задайте шаблон — календарь заполнится сменами автоматически.",
-                    BannerKind.INFO,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    action = { TextButton(onClick = onSetupSchedule) { Text("Настроить") } },
-                )
-            }
-            if (state.unconfirmedTotal > 0) {
-                Banner(
-                    "Не отмечены часы: ${Formats.shifts(state.unconfirmedTotal)}",
-                    BannerKind.WARNING,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    action = { TextButton(onClick = onOpenUnconfirmed) { Text("Отметить") } },
-                )
-            }
-            Spacer(Modifier.height(8.dp))
+        // The day panel takes the space under the calendar and never scrolls: the calendar does not
+        // move while months are swiped, and everything about the day is seen at once.
+        val details: @Composable (Modifier) -> Unit = { modifier ->
             DayPanel(
                 info = dayInfo,
                 date = selected,
                 calc = state.calc,
                 now = state.now,
-                actions = actions,
-                onAddShift = { extra -> onNewShift(selected, extra) },
-                onAddAbsence = { type -> onNewAbsence(type, selected) },
+                alarms = dayAlarms?.alarms.orEmpty(),
+                otherUnconfirmed = otherUnconfirmed,
+                hasSchedule = state.loading || state.hasSchedule,
+                markLabel = markLabel,
+                markEnabled = markShift != null || state.unconfirmedTotal > 0,
+                onEdit = { editing = true },
+                onMark = { if (markShift != null) onConfirmShift(markShift.id) else onOpenUnconfirmed() },
                 onOpenAbsence = { onOpenAbsence(it.id) },
-                onSaveNote = { text -> scope.launchSafely(snackbar) { vm.saveNote(selected, text) } },
-                alarms = dayAlarms,
+                onOpenPayout = { onOpenPayout(it.key) },
+                onOpenUnconfirmed = onOpenUnconfirmed,
+                onSetupSchedule = onSetupSchedule,
+                modifier = modifier,
             )
-            Spacer(Modifier.height(16.dp))
         }
 
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
@@ -266,9 +271,9 @@ fun CalendarScreen(
                 val cellHeight = minOf(byWidth, byHeight).coerceAtLeast(28.dp)
                 Row(Modifier.fillMaxSize()) {
                     Column(Modifier.width(calendarWidth).padding(top = 4.dp)) { calendar(cellHeight) }
-                    Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) {
+                    Column(Modifier.weight(1f).fillMaxHeight()) {
                         if (showSummary) summaryRow()
-                        details()
+                        details(Modifier.weight(1f))
                     }
                 }
             } else {
@@ -279,12 +284,15 @@ fun CalendarScreen(
                 Column(Modifier.fillMaxSize()) {
                     if (showSummary) summaryRow()
                     calendar(cellHeight)
-                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) { details() }
+                    details(Modifier.weight(1f))
                 }
             }
         }
     }
     if (legend) LegendDialog { legend = false }
+    if (editing) {
+        DayEditSheet(dayInfo, selected, state.calc?.zone ?: java.time.ZoneId.systemDefault(), dayAlarms, editActions, onDismiss = { editing = false })
+    }
 }
 
 /** Alarms of the selected day; switching one off here affects this day only. */
@@ -329,7 +337,7 @@ private const val DEFAULT_ALARM_MINUTE = 7 * 60
 private val SUMMARY_ROW_HEIGHT = 64.dp
 
 /** Space kept for the day panel under the calendar in portrait. */
-private val MIN_PANEL_HEIGHT = 150.dp
+private val MIN_PANEL_HEIGHT = 184.dp
 
 /** Pause after a scroll before the calendar counts as settled (a fling may follow a drag). */
 private const val SETTLE_DELAY_MS = 150L

@@ -125,16 +125,25 @@ fun DayCell(
     val alpha = if (inMonth) 1f else 0.38f
     val isToday = day.date == today
     val holiday = showHolidays && info?.specialDayOff == true
+    val payday = info?.payouts?.isNotEmpty() == true
+    // A day off with a payout takes the payday color; a working day keeps its state color and gets a payday frame.
+    val fill = when {
+        state == DayState.OFF && payday -> palette.payday
+        state == DayState.OFF -> Color.Transparent
+        else -> bg
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(height)
             .padding(2.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (state == DayState.OFF) Color.Transparent else bg.copy(alpha = if (inMonth) 1f else 0.45f))
+            .background(fill.copy(alpha = if (inMonth) fill.alpha else 0.45f * fill.alpha))
             .then(
                 if (selected) {
                     Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                } else if (payday) {
+                    Modifier.border(2.dp, palette.paydayAccent.copy(alpha = if (inMonth) 1f else 0.45f), RoundedCornerShape(12.dp))
                 } else if (state == DayState.OFF && inMonth) {
                     Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                 } else {
@@ -148,6 +157,7 @@ fun DayCell(
                 val numberColor = when {
                     isToday -> MaterialTheme.colorScheme.onPrimary
                     holiday -> palette.holiday
+                    state == DayState.OFF && payday -> palette.onPayday
                     state == DayState.OFF -> MaterialTheme.colorScheme.onSurface
                     else -> fg
                 }
@@ -166,6 +176,9 @@ fun DayCell(
                     )
                 }
                 Spacer(Modifier.weight(1f))
+                if (payday) {
+                    Text("₽", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = (if (state == DayState.OFF) palette.onPayday else fg).copy(alpha = alpha))
+                }
                 if (info?.hasExtra == true) {
                     Text("+", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = palette.onExtra.copy(alpha = alpha))
                 }
@@ -240,6 +253,16 @@ fun LegendDialog(onDismiss: () -> Unit) {
                         Spacer(Modifier.width(12.dp))
                         Text(text, style = MaterialTheme.typography.bodyMedium)
                     }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).background(p.payday).border(2.dp, p.paydayAccent, RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("₽", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = p.onPayday)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text("День выплаты аванса или зарплаты (рабочий день — в рамке)", style = MaterialTheme.typography.bodyMedium)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {

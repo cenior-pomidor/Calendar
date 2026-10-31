@@ -103,6 +103,13 @@ fun WorkCalendarRoot(container: AppContainer, pendingRoute: String?, onRouteHand
 
 private const val CALENDAR_ROUTE = "calendar?date={date}"
 
+private const val TEMPLATES_ROUTE = "settings/templates?from={from}"
+
+private fun fromArgument() = navArgument("from") {
+    type = NavType.StringType
+    defaultValue = ""
+}
+
 @Composable
 private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings?>, pendingRoute: String?, onRouteHandled: () -> Unit) {
     val nav = rememberNavController()
@@ -161,6 +168,8 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                         onSetupSchedule = { nav.navigate("settings/templates") },
                         onEditAlarm = { nav.navigate("alarm/edit/$it") },
                         onAddAlarm = { date, minute -> nav.navigate("alarm/edit/0?date=$date&minute=$minute") },
+                        onOpenPayout = { key -> nav.navigate("payment/new?key=$key") },
+                        onNewScheduleFrom = { date -> nav.navigate("settings/templates?from=$date") },
                     )
                 }
                 composable(
@@ -301,24 +310,39 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                     SettingsScreen(container, settingsState.value ?: AppSettings(), onNavigate = { nav.navigate(it) })
                 }
                 composable("settings/profile") { ProfileScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
-                composable("settings/templates") {
+                composable(TEMPLATES_ROUTE, arguments = listOf(fromArgument())) { entry ->
+                    // "from": a new schedule is chosen for the calendar from this day.
+                    val from = entry.arguments?.getString("from").orEmpty()
                     TemplatesScreen(
                         container = container,
                         onBack = backFor(nav, settingsState, "settings/templates"),
-                        onEdit = { nav.navigate("settings/template/$it") },
-                        onApply = { nav.navigate("settings/apply/$it") },
+                        onEdit = { nav.navigate("settings/template/$it?from=$from") },
+                        onApply = { nav.navigate("settings/apply/$it?from=$from") },
+                        from = from.toDateOrNull(),
                     )
                 }
-                composable("settings/template/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+                composable(
+                    "settings/template/{id}?from={from}",
+                    arguments = listOf(navArgument("id") { type = NavType.LongType }, fromArgument()),
+                ) { entry ->
+                    val from = entry.arguments?.getString("from").orEmpty()
                     TemplateEditScreen(
                         container = container,
                         templateId = entry.arguments?.getLong("id")?.takeIf { it > 0 },
                         onBack = { nav.popBackStack() },
-                        onSavedApply = { id -> nav.navigate("settings/apply/$id") { popUpTo("settings/templates") } },
+                        onSavedApply = { id -> nav.navigate("settings/apply/$id?from=$from") { popUpTo(TEMPLATES_ROUTE) } },
                     )
                 }
-                composable("settings/apply/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
-                    ApplyScheduleScreen(container, templateId = entry.arguments?.getLong("id") ?: 0L, onDone = { nav.popBackStack() })
+                composable(
+                    "settings/apply/{id}?from={from}",
+                    arguments = listOf(navArgument("id") { type = NavType.LongType }, fromArgument()),
+                ) { entry ->
+                    ApplyScheduleScreen(
+                        container,
+                        templateId = entry.arguments?.getLong("id") ?: 0L,
+                        from = entry.arguments?.getString("from").toDateOrNull(),
+                        onDone = { nav.popBackStack() },
+                    )
                 }
                 composable("settings/rates") { RatesScreen(container, onBack = { nav.popBackStack() }) }
                 composable("settings/payouts") {
