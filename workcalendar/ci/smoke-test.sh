@@ -46,6 +46,10 @@ names = ['января', 'февраля', 'марта', 'апреля', 'мая
 t = datetime.date.today()
 print(t.day, names[t.month - 1])"
 }
+# Next working day of the 5/2 schedule: holidays and transferred days off have no shifts.
+next_weekday() {
+  python3 -c "import datetime,sys
+fixed = {(1, d) for d in range(1, 9)} | {(2, 23), (3, 8), (5, 1), (5, 9), (6, 12), (11, 4)}
 # `input swipe` waits until the app has handled each event: while the app is still busy after the
 # setup wizard (generating the schedule), a quick swipe can turn into a plain touch without moves.
 # Let it settle first and log how long the swipe command takes.
@@ -177,11 +181,7 @@ $UI show "Ближайшие звонки"
 $UI dump alarm-after-test 0 "Ближайшие звонки" || exit 1
 
 # ---- Schedule: stop it from a working day, then apply a new one from the same day ----
-CUT=$(python3 -c "import datetime
-d = datetime.date.today() + datetime.timedelta(days=45)
-while d.weekday() >= 5:
-    d += datetime.timedelta(days=1)
-print(d)")
+CUT=$(next_weekday "$(date -d '+44 days' +%F)")
 CUT_RU=$(python3 -c "import datetime,sys; print(datetime.date.fromisoformat(sys.argv[1]).strftime('%d.%m.%Y'))" "$CUT")
 $UI route "day/$CUT"
 $UI dump cut-day 0 "09:00–18:00" || exit 1
@@ -202,10 +202,10 @@ $UI route "day/$CUT"
 $UI dump cut-restored 1 "09:00–18:00" || exit 1
 
 # ---- Notifications: shift end -> quick actions (needs adb root to move the clock) ----
-next_weekday() {
-  python3 -c "import datetime,sys
+transfers = {'2026-01-09', '2026-03-09', '2026-05-11', '2026-12-31', '2027-02-22', '2027-05-03', '2027-05-10',
+             '2027-06-14', '2027-11-05', '2027-12-31'}
 d = datetime.date.fromisoformat(sys.argv[1]) + datetime.timedelta(days=1)
-while d.weekday() >= 5:
+while d.weekday() >= 5 or (d.month, d.day) in fixed or d.isoformat() in transfers:
     d += datetime.timedelta(days=1)
 print(d)" "$1"
 }
