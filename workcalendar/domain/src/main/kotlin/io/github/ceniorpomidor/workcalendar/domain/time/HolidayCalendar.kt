@@ -12,7 +12,8 @@ import java.time.MonthDay
  * Built-in data: non-working public holidays of the Russian Federation (art. 112 of the
  * Labour Code), the automatic transfer of a holiday that falls on a weekend to the next
  * working day (except the January holidays), and the transfers set by the government for
- * 2025–2026. Anything else can be added by the user as [HolidayOverride]s.
+ * 2025–2027 (the production calendar up to the beginning of 2028). Anything else can be added
+ * by the user as [HolidayOverride]s.
  */
 class HolidayCalendar(
     overrides: List<HolidayOverride> = emptyList(),
@@ -58,6 +59,12 @@ class HolidayCalendar(
     }
 
     fun isBusinessDay(date: LocalDate): Boolean = !isNonWorkingDay(date)
+
+    /** A Saturday or Sunday made a working day by a decree or by the user. */
+    fun isWorkingWeekend(date: LocalDate): Boolean {
+        val weekend = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
+        return weekend && isBusinessDay(date)
+    }
 
     /** Day off that should be highlighted in the calendar (holiday or transferred day off, not a plain weekend). */
     fun isSpecialDayOff(date: LocalDate): Boolean {
@@ -164,13 +171,28 @@ class HolidayCalendar(
                 LocalDate.of(2026, 5, 11),
                 LocalDate.of(2026, 12, 31),
             ),
+            // Decree No. 1187 of 17.09.2026: 2 January -> 5 November, 3 January -> 31 December,
+            // 20 February (Saturday) -> 22 February; holidays on weekends: 1 May -> 3 May,
+            // 9 May -> 10 May, 12 June -> 14 June.
+            2027 to setOf(
+                LocalDate.of(2027, 2, 22),
+                LocalDate.of(2027, 5, 3),
+                LocalDate.of(2027, 5, 10),
+                LocalDate.of(2027, 6, 14),
+                LocalDate.of(2027, 11, 5),
+                LocalDate.of(2027, 12, 31),
+            ),
         )
 
-        private val DECREE_COVERS_WEEKEND_RULE: Set<Int> = setOf(2025, 2026)
+        private val DECREE_COVERS_WEEKEND_RULE: Set<Int> = setOf(2025, 2026, 2027)
+
+        /** Last year covered by the built-in decrees. */
+        const val LAST_DECREE_YEAR = 2027
 
         /** Working Saturdays set by decrees. */
         private val BUILT_IN_WORKDAYS: Set<LocalDate> = setOf(
             LocalDate.of(2025, 11, 1),
+            LocalDate.of(2027, 2, 20),
         )
     }
 }

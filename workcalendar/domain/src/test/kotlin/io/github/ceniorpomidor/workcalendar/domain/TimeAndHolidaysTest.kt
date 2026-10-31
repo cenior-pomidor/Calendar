@@ -4,6 +4,7 @@ import io.github.ceniorpomidor.workcalendar.domain.TestData.date
 import io.github.ceniorpomidor.workcalendar.domain.TestData.dateTime
 import io.github.ceniorpomidor.workcalendar.domain.model.HolidayOverride
 import io.github.ceniorpomidor.workcalendar.domain.model.HolidayOverrideType
+import io.github.ceniorpomidor.workcalendar.domain.time.DateRange
 import io.github.ceniorpomidor.workcalendar.domain.time.HolidayCalendar
 import io.github.ceniorpomidor.workcalendar.domain.time.TimeMath
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -41,6 +42,20 @@ class TimeAndHolidaysTest {
         val custom = HolidayCalendar(listOf(HolidayOverride(date("2026-10-07"), HolidayOverrideType.DAY_OFF, "Корпоратив")))
         assertTrue(custom.isNonWorkingDay(date("2026-10-07")))
         assertEquals("Корпоратив", custom.holidayName(date("2026-10-07")))
+    }
+
+    @Test
+    fun `production calendar 2027`() {
+        val cal = HolidayCalendar()
+        // Decree No. 1187 of 17.09.2026: 247 working days in a five-day week.
+        assertEquals(247, DateRange.year(2027).count { cal.isBusinessDay(it) })
+        for (day in listOf("2027-01-08", "2027-02-22", "2027-02-23", "2027-05-03", "2027-05-10", "2027-06-14", "2027-11-05", "2027-12-31")) {
+            assertTrue(cal.isNonWorkingDay(date(day)), day)
+        }
+        assertTrue(cal.isBusinessDay(date("2027-02-20")))
+        assertTrue(cal.isWorkingWeekend(date("2027-02-20")))
+        assertTrue(cal.isBusinessDay(date("2027-01-11")))
+        assertEquals("Выходной (перенос)", cal.holidayName(date("2027-11-05")))
     }
 
     @Test

@@ -71,7 +71,7 @@ fun HolidaysScreen(container: AppContainer, settings: AppSettings, onBack: () ->
         ScrollColumn(padding) {
             SwitchRow(
                 "Производственный календарь РФ",
-                "Праздники по ст. 112 ТК РФ, автоматический перенос выходных и переносы 2025–2026 гг.",
+                "Праздники по ст. 112 ТК РФ и переносы выходных по постановлениям Правительства на 2025–${HolidayCalendar.LAST_DECREE_YEAR} гг.",
                 settings.russianHolidays,
             ) { v -> scope.launchSafely(snackbar) { container.settings.update { it.copy(russianHolidays = v) } } }
             SectionCard(
@@ -105,8 +105,25 @@ fun HolidaysScreen(container: AppContainer, settings: AppSettings, onBack: () ->
                     TextButton(onClick = { year-- }) { Text("← ${year - 1}") }
                     TextButton(onClick = { year++ }) { Text("${year + 1} →") }
                 }
-                DateRange.year(year).filter { calendar.isSpecialDayOff(it) }.forEach { d ->
-                    Text("${Formats.weekdayShort(d.dayOfWeek)} ${Formats.date(d)} — ${calendar.holidayName(d) ?: "выходной"}", style = MaterialTheme.typography.bodySmall)
+                val days = DateRange.year(year)
+                Text(
+                    when {
+                        !settings.russianHolidays -> "Производственный календарь выключен: учитываются только свои дни."
+                        year in 2025..HolidayCalendar.LAST_DECREE_YEAR -> "Переносы по постановлению Правительства учтены."
+                        else ->
+                            "Постановление о переносах на $year г. ещё не учтено: автоматически переносятся только праздники, " +
+                                "выпавшие на выходные (кроме январских). Переносы можно добавить в «Свои дни»."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "Рабочих дней при пятидневке: ${days.count { calendar.isBusinessDay(it) }}, выходных и праздничных: ${days.count { calendar.isNonWorkingDay(it) }}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                days.filter { calendar.isSpecialDayOff(it) || calendar.isWorkingWeekend(it) }.forEach { d ->
+                    val what = if (calendar.isWorkingWeekend(d)) "рабочий день (перенос)" else calendar.holidayName(d) ?: "выходной"
+                    Text("${Formats.weekdayShort(d.dayOfWeek)} ${Formats.date(d)} — $what", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
