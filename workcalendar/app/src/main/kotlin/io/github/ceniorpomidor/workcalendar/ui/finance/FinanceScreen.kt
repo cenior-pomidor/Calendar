@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -24,6 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,13 +45,17 @@ import io.github.ceniorpomidor.workcalendar.domain.time.DateRange
 import io.github.ceniorpomidor.workcalendar.domain.util.Formats
 import io.github.ceniorpomidor.workcalendar.ui.components.Banner
 import io.github.ceniorpomidor.workcalendar.ui.components.BannerKind
+import io.github.ceniorpomidor.workcalendar.ui.components.DateField
 import io.github.ceniorpomidor.workcalendar.ui.components.DateRangePickerDialog
+import io.github.ceniorpomidor.workcalendar.ui.components.LocalSnackbar
+import io.github.ceniorpomidor.workcalendar.ui.components.NumberField
 import io.github.ceniorpomidor.workcalendar.ui.components.ScrollColumn
 import io.github.ceniorpomidor.workcalendar.ui.components.SectionCard
 import io.github.ceniorpomidor.workcalendar.ui.components.SubScreen
 import io.github.ceniorpomidor.workcalendar.ui.components.Tag
 import io.github.ceniorpomidor.workcalendar.ui.components.ThinDivider
 import io.github.ceniorpomidor.workcalendar.ui.components.ValueRow
+import io.github.ceniorpomidor.workcalendar.ui.components.launchSafely
 import io.github.ceniorpomidor.workcalendar.ui.components.money
 import io.github.ceniorpomidor.workcalendar.ui.theme.AppIcons
 import io.github.ceniorpomidor.workcalendar.ui.theme.AppTheme
@@ -72,6 +79,9 @@ fun FinanceScreen(
     val vm: FinanceViewModel = viewModel { FinanceViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
     var pickRange by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<PayoutInstance?>(null) }
+    val snackbar = LocalSnackbar.current
+    val scope = rememberCoroutineScope()
     val period = state.period
 
     SubScreen(
@@ -144,13 +154,14 @@ fun FinanceScreen(
                     action = { TextButton(onClick = onOpenUnconfirmed) { Text("Отметить") } },
                 )
             }
-            HeroCard(summary, state.previous)
+            HeroCard(summary, state.previous, monthMode = period.mode == PeriodMode.MONTH)
             AccrualsCard(summary)
             HoursCard(summary)
             if (period.mode == PeriodMode.MONTH) {
-                PayoutsCard(state, onPayout, onPayoutRules)
+                PayoutsCard(state, onEdit = { editing = it }, onRules = onPayoutRules)
+                if (state.forecast.isNotEmpty()) ForecastCard(state.forecast, onMonth = { vm.setMonth(it) })
             }
-            if (state.upcoming.isNotEmpty() && (period.mode != PeriodMode.MONTH || state.upcoming.any { it.periodMonth != period.month })) {
+            if (state.upcoming.isNotEmpty() && period.mode != PeriodMode.MONTH) {
                 SectionCard(title = "Ближайшие выплаты", icon = AppIcons.Event) {
                     state.upcoming.take(4).forEach { PayoutRow(it, state.today, onClick = { onPayout(it.key) }) }
                 }
@@ -231,6 +242,30 @@ fun FinanceScreen(
         }
     }
 
+    editing?.let { payout ->
+        ReceivedDialog(
+            payout = payout,
+            today = state.today,
+            onSave = { amount, date ->
+                editing = null
+                scope.launchSafely(snackbar, success = "Сохранено: пришло ${Formats.money(amount)}") {
+                    container.finance.markPayoutReceived(payout, amount, date, payout.payment?.note.orEmpty())
+                }
+            },
+            onClear = payout.payment?.let { payment ->
+                {
+                    editing = null
+                    scope.launchSafely(snackbar, success = "Отметка о получении снята") { container.finance.deletePayment(payment) }
+                }
+            },
+            onMore = {
+                editing = null
+                onPayout(payout.key)
+            },
+            onDismiss = { editing = null },
+        )
+    }
+
     if (pickRange) {
         DateRangePickerDialog(period.range.start, period.range.endInclusive, "Период", onDismiss = { pickRange = false }) { s, e ->
             vm.setRange(DateRange(s, e))
@@ -240,27 +275,35 @@ fun FinanceScreen(
 }
 
 @Composable
-private fun HeroCard(summary: PeriodSummary, previous: PeriodSummary?) {
+private fun HeroCard(summary: PeriodSummary, previous: PeriodSummary?, monthMode: Boolean) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Расчётный заработок", style = MaterialTheme.typography.labelLarge)
-            Text(money(summary.grossAccrued), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Подтверждено за работу: ${money(summary.confirmedEarnings)}", style = MaterialTheme.typography.bodyMedium)
+            Text("За отработанные часы", style = MaterialTheme.typography.labelLarge)
+            Text(money(summary.confirmedEarnings), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("${Formats.hours(summary.workedMinutes)} подтверждено из ${Formats.hours(summary.plannedMinutes)} по графику", style = MaterialTheme.typography.bodyMedium)
+            if (monthMode) {
+                summary.forecastEarnings?.takeIf { it != summary.confirmedEarnings }?.let {
+                    Text("С учётом оставшихся смен: ≈ ${money(it)}", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            if (summary.grossAccrued != summary.confirmedEarnings) {
+                Text("Всего начислено (с отпускными, премиями, удержаниями): ${money(summary.grossAccrued)}", style = MaterialTheme.typography.bodySmall)
+            }
             if (previous != null) {
-                val prev = previous.grossAccrued
+                val prev = previous.confirmedEarnings
                 val diffText = if (prev.isPositive) {
-                    val pct = ((summary.grossAccrued.kopecks - prev.kopecks) * 100.0 / prev.kopecks)
+                    val pct = ((summary.confirmedEarnings.kopecks - prev.kopecks) * 100.0 / prev.kopecks)
                     " (${if (pct >= 0) "+" else ""}${"%.0f".format(pct)}%)"
                 } else {
                     ""
                 }
                 Text("Предыдущий месяц: ${money(prev)}$diffText", style = MaterialTheme.typography.bodySmall)
             }
-            Text("Без учёта налогов и удержаний — это не гарантированная сумма на руки.", style = MaterialTheme.typography.bodySmall)
+            Text("Без учёта налогов — это не сумма на руки.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -304,18 +347,147 @@ private fun HoursCard(s: PeriodSummary) {
 }
 
 @Composable
-private fun PayoutsCard(state: FinanceUiState, onPayout: (String) -> Unit, onRules: () -> Unit) {
-    SectionCard(title = "Аванс и зарплата", icon = AppIcons.Wallet, action = { TextButton(onClick = onRules) { Text("Правила") } }) {
+private fun PayoutsCard(state: FinanceUiState, onEdit: (PayoutInstance) -> Unit, onRules: () -> Unit) {
+    SectionCard(title = "Аванс и зарплата за месяц", icon = AppIcons.Wallet, action = { TextButton(onClick = onRules) { Text("Правила") } }) {
         if (state.payouts.isEmpty()) {
             Text("Правила выплат не настроены", style = MaterialTheme.typography.bodyMedium)
             return@SectionCard
         }
-        state.payouts.forEach { PayoutRow(it, state.today, onClick = { onPayout(it.key) }) }
+        Text(
+            "Нажмите на выплату, чтобы внести или исправить сумму, которая пришла.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        state.payouts.forEach { PayoutAmountsRow(it, state.today, onClick = { onEdit(it) }) }
         ThinDivider()
         ValueRow("Ожидается за месяц", state.expectedTotal?.let { money(it) } ?: "недостаточно данных")
-        ValueRow("Получено", money(state.receivedTotal))
-        ValueRow("Остаток к получению", state.remaining?.let { money(it) } ?: "недостаточно данных", emphasize = true)
+        ValueRow("Пришло", money(state.receivedTotal), valueColor = AppTheme.status.positive)
+        ValueRow("Ещё должны выплатить", state.remaining?.let { money(it) } ?: "недостаточно данных", emphasize = true)
     }
+}
+
+/** A payout with the calculated amount and the amount that came, side by side. */
+@Composable
+private fun PayoutAmountsRow(payout: PayoutInstance, today: java.time.LocalDate, onClick: () -> Unit) {
+    val status = AppTheme.status
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(payout.rule.name, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "${Formats.weekdayShort(payout.payDate.dayOfWeek)}, ${Formats.date(payout.payDate)} · за ${Formats.period(payout.period.start, payout.period.endInclusive)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(AppIcons.Edit, contentDescription = "Внести сумму", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row {
+            Column(Modifier.weight(1f)) {
+                Text("Рассчитано", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                when (val amount = payout.amount) {
+                    is PayoutAmount.Calculated -> Text(
+                        (if (amount.isEstimate) "≈ " else "") + money(amount.net),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    is PayoutAmount.Insufficient -> Text("нет данных", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Text("Пришло", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val payment = payout.payment
+                when {
+                    payment != null -> Text(
+                        "${money(payment.amount)} · ${Formats.shortDate(payment.date)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = status.positive,
+                    )
+                    payout.payDate.isAfter(today) -> Tag("ожидается", status.planned, status.onPlanned)
+                    else -> Tag("внесите сумму", status.awaiting, status.onAwaiting)
+                }
+            }
+        }
+        (payout.amount as? PayoutAmount.Insufficient)?.let {
+            Text(it.reason, style = MaterialTheme.typography.bodySmall, color = status.onAwaiting)
+        }
+    }
+}
+
+/** Coming months: payouts expected by the shifts already in the calendar. */
+@Composable
+private fun ForecastCard(forecast: List<ForecastMonth>, onMonth: (java.time.YearMonth) -> Unit) {
+    SectionCard(title = "Прогноз выплат", icon = AppIcons.TrendingUp) {
+        Text(
+            "По сменам в календаре, до вычета налога. Изменится, если поменять смены, график или ставку.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        forecast.forEachIndexed { index, f ->
+            if (index > 0) ThinDivider()
+            Column(Modifier.fillMaxWidth().clickable { onMonth(f.month) }.padding(vertical = 4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(Formats.monthTitle(f.month), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    Text(f.total?.let { "≈ ${money(it)}" } ?: "нет данных", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                }
+                Text(
+                    "${Formats.shifts(f.summary.scheduledShifts)} · ${Formats.hours(f.summary.plannedMinutes)}" +
+                        (f.summary.plannedEarnings?.let { " · заработок ≈ ${money(it)}" } ?: ""),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                f.payouts.forEach { payout ->
+                    Row {
+                        Text(
+                            "${payout.rule.name} ${Formats.shortDate(payout.payDate)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(payout.effectiveNet?.let { "≈ ${money(it)}" } ?: "нет данных", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Quick entry of the amount that came for a payout. */
+@Composable
+private fun ReceivedDialog(
+    payout: PayoutInstance,
+    today: java.time.LocalDate,
+    onSave: (Money, java.time.LocalDate) -> Unit,
+    onClear: (() -> Unit)?,
+    onMore: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var amountText by rememberSaveable { mutableStateOf((payout.payment?.amount ?: payout.expectedNet)?.toString()?.replace('.', ',').orEmpty()) }
+    var date by rememberSaveable { mutableStateOf(payout.payment?.date ?: if (payout.payDate.isAfter(today)) today else payout.payDate) }
+    val amount = Money.parse(amountText)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(payout.title.replaceFirstChar { it.uppercase() }) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Рассчитано: " + (payout.expectedNet?.let { money(it) } ?: "нет данных") + ", выплата по правилу ${Formats.date(payout.payDate)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                NumberField("Сколько пришло", amountText, { amountText = it }, suffix = "₽", isError = amountText.isNotBlank() && amount == null)
+                DateField("Дата получения", date, { date = it })
+                TextButton(onClick = onMore) { Text("Комментарий и подробный расчёт") }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = amount != null && amount.isPositive, onClick = { amount?.let { onSave(it, date) } }) { Text("Сохранить") }
+        },
+        dismissButton = {
+            Row {
+                if (onClear != null) TextButton(onClick = onClear) { Text("Не пришло") }
+                TextButton(onClick = onDismiss) { Text("Отмена") }
+            }
+        },
+    )
 }
 
 @Composable

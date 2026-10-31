@@ -89,6 +89,17 @@ $UI dump calendar-day 1 || exit 1
 $UI tap "Финансы" 1
 sleep 2
 $UI dump finance 1 || exit 1
+# Payouts of the month: calculated and received amounts, what is still owed; enter the salary that came.
+$UI show "Ещё должны выплатить"
+$UI dump finance-payouts 1 "Рассчитано" "Пришло" "Ещё должны выплатить" || exit 1
+$UI tap "Зарплата" 1
+$UI dump received-dialog 0 "Сколько пришло" || exit 1
+$UI tap "Сохранить" 1
+sleep 2
+$UI show "Ещё должны выплатить"
+$UI dump finance-received 0 " · $(date +%d.%m)" || exit 1
+$UI show "Прогноз выплат"
+$UI dump finance-forecast 1 "Прогноз выплат" || exit 1
 $UI route "finance/stats"
 $UI dump stats 1 || exit 1
 $UI route "finance/history"
@@ -107,7 +118,8 @@ VACATION=$(date -d '+20 days' +%F)
 $UI route "absence/new?type=VACATION&start=$VACATION"
 sleep 2
 $UI dump absence 1 || exit 1
-$UI tap "Сохранить" 1
+# The button is under a long form: allow more scrolling.
+$UI tap "Сохранить" 1 1 12
 sleep 2
 $UI route "day/$VACATION"
 $UI dump vacation-day 1 "Отпуск" || exit 1

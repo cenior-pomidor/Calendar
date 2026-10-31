@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -36,6 +37,12 @@ data class Period(val mode: PeriodMode, val range: DateRange, val month: YearMon
 
 data class AbsencePaymentRow(val item: AbsencePayment, val received: Payment?)
 
+/** Expected payouts for a coming month, by the shifts already in the calendar. */
+data class ForecastMonth(val month: YearMonth, val summary: PeriodSummary, val payouts: List<PayoutInstance>) {
+    /** Sum of the payouts for the month; null when one of them cannot be calculated. */
+    val total: Money? get() = if (payouts.any { it.effectiveNet == null }) null else payouts.fold(Money.ZERO) { a, p -> a + (p.effectiveNet ?: Money.ZERO) }
+}
+
 data class FinanceUiState(
     val period: Period,
     val settings: AppSettings = AppSettings(),
@@ -46,6 +53,7 @@ data class FinanceUiState(
     val absencePayments: List<AbsencePaymentRow> = emptyList(),
     val accruals: List<ManualAccrual> = emptyList(),
     val payments: List<Payment> = emptyList(),
+    val forecast: List<ForecastMonth> = emptyList(),
     val hasRates: Boolean = true,
     val today: LocalDate = LocalDate.now(),
     val loading: Boolean = true,
@@ -100,9 +108,29 @@ class FinanceViewModel(private val c: AppContainer) : ViewModel() {
 
     private val upcomingRange = DateRange(YearMonth.from(today).minusMonths(2).atDay(1), YearMonth.from(today).plusMonths(1).atEndOfMonth())
 
+    /** Coming months shown in the forecast of the month [p]: none for past months. */
+    private fun forecastMonths(p: Period): List<YearMonth> =
+        if (p.mode == PeriodMode.MONTH && p.month >= YearMonth.from(today)) (1L..FORECAST_MONTHS).map { p.month.plusMonths(it) } else emptyList()
+
+    init {
+        // The forecast needs the shifts of the coming months: create them by the schedule.
+        viewModelScope.launch {
+            period.collect { p ->
+                val months = forecastMonths(p)
+                if (months.isNotEmpty()) {
+                    try {
+                        c.schedule.ensureGenerated(DateRange(months.first().atDay(1), months.last().atEndOfMonth()))
+                    } catch (e: Exception) {
+                        android.util.Log.e("WorkCalendar", "Generation failed", e)
+                    }
+                }
+            }
+        }
+    }
+
     val state: StateFlow<FinanceUiState> = period.flatMapLatest { p ->
         val loadStart = minOf(p.range.start, p.month.minusMonths(1).atDay(1), upcomingRange.start)
-        val loadEnd = maxOf(p.range.endInclusive, upcomingRange.endInclusive)
+        val loadEnd = maxOf(p.range.endInclusive, upcomingRange.endInclusive, forecastMonths(p).lastOrNull()?.atEndOfMonth() ?: p.range.endInclusive)
         combine(
             c.shifts.observeRange(DateRange(loadStart, loadEnd)),
             c.absences.all,
@@ -130,8 +158,16 @@ class FinanceViewModel(private val c: AppContainer) : ViewModel() {
         val absencePayments = c.absences.payments(relevant, calc, paydays)
             .filter { it.date in p.range || it.absence.range.overlaps(p.range) }
             .map { item -> AbsencePaymentRow(item, d.payments.firstOrNull { it.payoutKey == item.key }) }
+        val forecast = forecastMonths(p).map { month ->
+            ForecastMonth(
+                month = month,
+                summary = calc.summaries.summarize(DateRange.month(month), d.shifts, d.absences, d.accruals, now),
+                payouts = calc.payouts.forMonth(month, d.rules, d.shifts, d.accruals, d.payments, now),
+            )
+        }
         return FinanceUiState(
             period = p,
+            forecast = forecast,
             settings = calc.settings,
             summary = summary,
             previous = previous,
@@ -146,3 +182,6 @@ class FinanceViewModel(private val c: AppContainer) : ViewModel() {
         )
     }
 }
+
+/** How many coming months the forecast shows. */
+private const val FORECAST_MONTHS = 3L

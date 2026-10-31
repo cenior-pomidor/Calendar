@@ -177,9 +177,9 @@ def swipe_up():
     time.sleep(1)
 
 
-def cmd_tap(text, exact="0", scroll="1"):
+def cmd_tap(text, exact="0", scroll="1", attempts=None):
     cmd_hide_keyboard()
-    for attempt in range(6 if scroll == "1" else 3):
+    for attempt in range(int(attempts) if attempts else (6 if scroll == "1" else 3)):
         root = dump_xml()
         node = find(root, text, exact == "1") if root is not None else None
         if node is not None:
