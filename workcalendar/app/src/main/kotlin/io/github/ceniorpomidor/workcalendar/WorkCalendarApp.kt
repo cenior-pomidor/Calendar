@@ -17,6 +17,7 @@ import io.github.ceniorpomidor.workcalendar.data.repo.SystemAppClock
 import io.github.ceniorpomidor.workcalendar.notifications.NotificationScheduler
 import io.github.ceniorpomidor.workcalendar.notifications.Notifications
 import io.github.ceniorpomidor.workcalendar.notifications.WakeAlarmScheduler
+import io.github.ceniorpomidor.workcalendar.update.AppUpdater
 import io.github.ceniorpomidor.workcalendar.widget.WidgetUpdater
 import io.github.ceniorpomidor.workcalendar.work.MaintenanceWorker
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +43,7 @@ class AppContainer(val context: Context) {
     val backup: BackupRepository = BackupRepository(context, db, settings, calc, log, changes, clock)
     val notifications: NotificationScheduler = NotificationScheduler(context, db, calc, absences, clock)
     val wakeAlarms: WakeAlarmScheduler = WakeAlarmScheduler(context, db, settings, clock)
+    val updater: AppUpdater = AppUpdater(context, settings)
 
     @OptIn(FlowPreview::class)
     fun start() {

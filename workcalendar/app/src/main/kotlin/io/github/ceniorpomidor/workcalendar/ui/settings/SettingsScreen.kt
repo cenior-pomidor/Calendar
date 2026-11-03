@@ -58,6 +58,12 @@ fun SettingsScreen(container: AppContainer, settings: AppSettings, onNavigate: (
             SectionCard(title = "Данные") {
                 SettingRow("Резервная копия и экспорт", "Копия в файл, восстановление, CSV, календарь .ics", AppIcons.Backup, onClick = { onNavigate("settings/backup") })
                 SettingRow("Журнал изменений", "История подтверждений, ставок, графиков и выплат", AppIcons.History, onClick = { onNavigate("settings/log") })
+                SettingRow(
+                    "Обновление приложения",
+                    "Версия ${BuildConfig.VERSION_NAME} · проверить новую",
+                    AppIcons.Download,
+                    onClick = { onNavigate("settings/update") },
+                )
                 SettingRow("Сбросить настройки", "Данные календаря и финансов сохранятся", AppIcons.Restore, onClick = { askReset = true })
             }
             Text(

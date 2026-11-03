@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -14,12 +15,16 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,6 +69,7 @@ import io.github.ceniorpomidor.workcalendar.ui.settings.SecurityScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.SettingsScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.TemplateEditScreen
 import io.github.ceniorpomidor.workcalendar.ui.settings.TemplatesScreen
+import io.github.ceniorpomidor.workcalendar.ui.settings.UpdateScreen
 import io.github.ceniorpomidor.workcalendar.ui.shift.ConfirmShiftScreen
 import io.github.ceniorpomidor.workcalendar.ui.shift.ShiftEditScreen
 import io.github.ceniorpomidor.workcalendar.ui.shift.UnconfirmedScreen
@@ -134,6 +140,33 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
         val route = pendingRoute ?: return@LaunchedEffect
         openDeepLink(nav, route)
         onRouteHandled()
+    }
+
+    // A newer version is looked for only when the app is opened (Settings → Обновление приложения).
+    var newVersion by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        if (settingsState.value?.onboardingDone == true) {
+            container.updater.checkOnOpen()?.let { newVersion = it.version.toString() }
+        }
+    }
+    newVersion?.let { version ->
+        AlertDialog(
+            onDismissRequest = { newVersion = null },
+            title = { Text("Доступна версия $version") },
+            text = { Text("Установлена версия ${container.updater.currentVersion}. Обновление ставится поверх, все данные сохраняются.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    newVersion = null
+                    nav.navigate("settings/update?check=true")
+                }) { Text("Обновить") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    container.updater.putOff(version)
+                    newVersion = null
+                }) { Text("Позже") }
+            },
+        )
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -389,6 +422,22 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                 composable("settings/backup") { BackupScreen(container, onBack = { nav.popBackStack() }) }
                 composable("settings/security") { SecurityScreen(container, settingsState.value ?: AppSettings(), onBack = { nav.popBackStack() }) }
                 composable("settings/log") { ChangeLogScreen(container, onBack = { nav.popBackStack() }) }
+                composable(
+                    "settings/update?check={check}",
+                    arguments = listOf(
+                        navArgument("check") {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        },
+                    ),
+                ) { entry ->
+                    UpdateScreen(
+                        container,
+                        settingsState.value ?: AppSettings(),
+                        checkAtOnce = entry.arguments?.getBoolean("check") ?: false,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
             }
         }
         if (showBottomBar) {

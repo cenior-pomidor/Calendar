@@ -138,6 +138,12 @@ $UI route "settings/backup"
 $UI dump backup 0 || exit 1
 $UI route "settings/notifications"
 $UI dump notifications 0 || exit 1
+# Update from the app: the build under test is the newest version (GitHub may limit requests: not fatal).
+$UI route "settings/update"
+$UI tap "Проверить обновления" 1
+if ! $UI wait update-check "Установлена последняя версия" 40; then
+  echo "!! WARNING: the update check did not answer"
+fi
 $UI route "search"
 $UI dump search 0 || exit 1
 
@@ -278,7 +284,7 @@ if adb logcat -d -b crash | grep -q "FATAL EXCEPTION"; then
   exit 1
 fi
 # Guard against a script that silently skipped its steps: the key screens must have been visited.
-for screen in swipe-slow finance-forecast day-edit cut-restored alarm-test day-after-reply alarm-snoozed-ring; do
+for screen in swipe-slow update-check finance-forecast day-edit cut-restored alarm-test day-after-reply alarm-snoozed-ring; do
   if [ ! -f "smoke/$screen.png" ]; then
     echo "!! step was not reached: $screen"
     exit 1

@@ -207,4 +207,6 @@ data class AppSettings(
     val security: SecuritySettings = SecuritySettings(),
     /** Use the built-in Russian public holidays calendar. */
     val russianHolidays: Boolean = true,
+    /** Look for a new version of the app once a day and notify about it. */
+    val autoUpdateCheck: Boolean = true,
 )
