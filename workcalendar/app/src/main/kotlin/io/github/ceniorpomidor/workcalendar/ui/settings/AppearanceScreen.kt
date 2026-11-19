@@ -1,6 +1,8 @@
 package io.github.ceniorpomidor.workcalendar.ui.settings
 
 import android.os.Build
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -30,6 +34,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -49,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import io.github.ceniorpomidor.workcalendar.AppContainer
 import io.github.ceniorpomidor.workcalendar.domain.color.ThemeColors
 import io.github.ceniorpomidor.workcalendar.domain.model.AppSettings
+import io.github.ceniorpomidor.workcalendar.domain.model.CalendarArt
 import io.github.ceniorpomidor.workcalendar.domain.model.ColorPalette
 import io.github.ceniorpomidor.workcalendar.domain.model.NavItem
 import io.github.ceniorpomidor.workcalendar.domain.model.NavLabels
@@ -85,7 +91,12 @@ private val rainbow = Brush.sweepGradient(listOf(Color.Red, Color.Yellow, Color.
 @Composable
 fun AppearanceScreen(container: AppContainer, settings: AppSettings, onBack: () -> Unit) {
     val update = rememberSettingsUpdater(container)
+    var chooseArt by remember { mutableStateOf(false) }
     val c = settings.calendar
+    if (chooseArt) CalendarArtPicker(c.art, { chooseArt = false }) { selected ->
+        update { it.copy(calendar = it.calendar.copy(art = selected)) }
+        chooseArt = false
+    }
     SubScreen(title = "Оформление", onBack = onBack) { padding ->
         ScrollColumn(padding) {
             SectionCard(title = "Тема", icon = AppIcons.Contrast) {
@@ -105,6 +116,7 @@ fun AppearanceScreen(container: AppContainer, settings: AppSettings, onBack: () 
                 NavItemsEditor(settings, update)
             }
             SectionCard(title = "Календарь", icon = AppIcons.CalendarMonth) {
+                TextButton(onClick = { chooseArt = true }) { Text("Тема календаря · ${c.art.title}") }
                 Text("Первый день недели", style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY, DayOfWeek.SATURDAY).forEach { day ->
@@ -288,4 +300,22 @@ private fun NavItemRow(item: NavItem, checked: Boolean, enabled: Boolean, onTogg
             IconButton(onClick = { onDown?.invoke() }, enabled = onDown != null) { Icon(AppIcons.ExpandMore, contentDescription = "Ниже") }
         }
     }
+}
+
+@Composable
+private fun CalendarArtPicker(current: CalendarArt, dismiss: () -> Unit, select: (CalendarArt) -> Unit) {
+    AlertDialog(
+        onDismissRequest = dismiss, title = { Text("Тема календаря") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                CalendarArt.entries.forEach { theme ->
+                    TextButton(onClick = { select(theme) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(theme.title, Modifier.weight(1f))
+                        if (current == theme) Icon(AppIcons.Check, "Выбрано")
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = dismiss) { Text("Закрыть") } },
+    )
 }
