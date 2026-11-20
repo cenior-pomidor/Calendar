@@ -92,7 +92,7 @@ private fun CalendarThemeSample(style: CalendarStyle) {
         Row(Modifier.fillMaxWidth().calendarSheet(style, textured = true).padding(vertical = 3.dp)) {
             val marks = listOf(CalendarMark.SHIFT, CalendarMark.CONFIRMED, CalendarMark.VACATION)
             for ((index, mark) in marks.withIndex()) {
-                Column(Modifier.weight(1f).padding(1.dp).clip(RoundedCornerShape(3.dp)).background(mark.fill(style)),
+                Column(Modifier.weight(1f).padding(1.dp).clip(RoundedCornerShape(3.dp)).dayPaint(style, mark, null, null),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     CalendarDate(
                         number = 17 + index,

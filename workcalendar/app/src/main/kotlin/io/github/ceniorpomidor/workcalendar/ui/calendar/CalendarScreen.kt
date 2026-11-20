@@ -209,8 +209,9 @@ fun CalendarScreen(
         contentColor = style.ink,
         topBar = {
             TopAppBar(
+                modifier = if (style.wall) Modifier.calendarBackdrop(style) else Modifier,
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = style.background,
+                    containerColor = if (style.wall) Color.Transparent else style.background,
                     titleContentColor = style.ink,
                     actionIconContentColor = style.ink,
                 ),
@@ -218,7 +219,7 @@ fun CalendarScreen(
                     BasicText(
                         Formats.monthTitle(visibleMonth),
                         style = style.titleStyle.copy(color = style.ink),
-                        maxLines = 2,
+                        maxLines = if (style.wall) 1 else 2,
                         autoSize = TextAutoSize.StepBased(14.sp, style.titleStyle.fontSize, 1.sp),
                     )
                 },

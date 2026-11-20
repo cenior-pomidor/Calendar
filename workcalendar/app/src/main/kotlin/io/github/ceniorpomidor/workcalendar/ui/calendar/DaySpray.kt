@@ -12,11 +12,18 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import io.github.ceniorpomidor.workcalendar.R
+import kotlin.math.roundToInt
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -40,6 +47,13 @@ private val mist = Random(32).let { random ->
     List(42) { Offset(random.nextFloat() * 2 - 1, random.nextFloat() * 2 - 1) }
 }
 
+private fun DrawScope.spraySwatch(mask: ImageBitmap, tint: ColorFilter?, alpha: Float = 1f) {
+    if (tint != null) {
+        drawImage(mask, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()), colorFilter = tint, alpha = alpha)
+    }
+}
+
+@Composable
 internal fun Modifier.dayPaint(
     style: CalendarStyle,
     mark: CalendarMark?,
@@ -47,7 +61,10 @@ internal fun Modifier.dayPaint(
     progress: State<Float>?,
 ): Modifier {
     val fill = mark?.fill(style) ?: Color.Transparent
-    if (pass == null || progress == null) return background(fill)
+    if (!style.wall) return background(fill)
+    val mask = ImageBitmap.imageResource(R.drawable.calendar_spray)
+    val newTint = remember(fill) { mark?.let { ColorFilter.tint(fill) } }
+    if (pass == null || progress == null) return if (newTint == null) this else drawBehind { spraySwatch(mask, newTint) }
     val old = pass.previous?.fill(style) ?: Color.Transparent
     val pigment = when (pass.reason) {
         PaintReason.SHIFT -> mark?.ink(style) ?: style.paper
@@ -55,7 +72,9 @@ internal fun Modifier.dayPaint(
         PaintReason.NOTE, PaintReason.ALARM -> style.accent
         PaintReason.HOLIDAY -> style.holiday
     }
-    val wipe = Path()
+    val oldTint = remember(old) { pass.previous?.let { ColorFilter.tint(old) } }
+    val wetTint = remember(pigment) { ColorFilter.tint(pigment) }
+    val wipe = remember(pass) { Path() }
     return drawBehind {
         val t = progress.value
         val swept = (t / 0.79f).coerceAtMost(1f)
@@ -79,10 +98,10 @@ internal fun Modifier.dayPaint(
             wipe.lineTo(0f, seam)
         }
         wipe.close()
-        clipPath(wipe, ClipOp.Difference) { drawRect(old) }
+        clipPath(wipe, ClipOp.Difference) { spraySwatch(mask, oldTint) }
         clipPath(wipe) {
-            drawRect(fill)
-            drawRect(pigment, alpha = 0.52f * (1 - t))
+            spraySwatch(mask, newTint)
+            spraySwatch(mask, wetTint, alpha = 0.52f * (1 - t))
         }
         if (swept < 1f) {
             val headY = h * (0.15f + swept * 0.72f)
