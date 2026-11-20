@@ -3,7 +3,9 @@
 package io.github.ceniorpomidor.workcalendar.domain.model
 
 import io.github.ceniorpomidor.workcalendar.domain.util.LocalDateSerializer
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
 import kotlinx.serialization.UseSerializers
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -116,14 +118,13 @@ enum class ApplyFromDefault {
     NEXT_MONTH,
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 enum class CalendarArt(val title: String) {
-    CLASSIC("Текущее оформление"),
-    BANDS("Синие ленты"),
-    AURORA("Пастель"),
-    COMIC("Комикс"),
+    // Keep settings and backups written by 1.5.x readable when a skin is retired.
+    @JsonNames("BANDS", "AURORA", "COMIC", "OFFICE")
+    CLASSIC("Основная"),
     GRAFFITI("Граффити"),
-    OFFICE("Офисные стикеры"),
 }
 
 @Serializable

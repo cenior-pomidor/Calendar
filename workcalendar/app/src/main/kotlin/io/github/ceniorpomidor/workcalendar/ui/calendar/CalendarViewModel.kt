@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import io.github.ceniorpomidor.workcalendar.AppContainer
 import io.github.ceniorpomidor.workcalendar.data.db.DayNoteEntity
 import io.github.ceniorpomidor.workcalendar.data.repo.CalcContext
+import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmPlanner
 import io.github.ceniorpomidor.workcalendar.domain.model.Absence
 import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
 import io.github.ceniorpomidor.workcalendar.domain.model.AppSettings
+import io.github.ceniorpomidor.workcalendar.domain.model.CalendarArt
 import io.github.ceniorpomidor.workcalendar.domain.model.ManualAccrual
 import io.github.ceniorpomidor.workcalendar.domain.model.Money
 import io.github.ceniorpomidor.workcalendar.domain.model.Payment
@@ -36,6 +38,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.temporal.TemporalAdjusters.previousOrSame
 
 /** Aggregated state of a calendar day; defines its color. */
 enum class DayState {
@@ -146,6 +149,39 @@ class CalendarViewModel(private val c: AppContainer) : ViewModel() {
             }
         }
     }
+
+    // The calendar destination survives editors on the navigation stack. Compare the last
+    // displayed records on return so cancelling an editor and the clock tick do not spray a date.
+    private var displayed: CalendarUiState? = null
+
+    internal fun calendarEdits(current: CalendarUiState, visibleMonth: YearMonth): Map<LocalDate, DayPaint> {
+        if (current.month != visibleMonth) return emptyMap()
+        val previous = displayed
+        displayed = current
+        if (current.settings.calendar.art != CalendarArt.GRAFFITI ||
+            previous?.settings?.calendar?.art != CalendarArt.GRAFFITI || previous.month != current.month
+        ) return emptyMap()
+        val first = visibleMonth.atDay(1).with(previousOrSame(current.settings.calendar.firstDayOfWeek))
+        return buildMap {
+            for (offset in 0L until 42L) {
+                val date = first.plusDays(offset)
+                val before = previous.days[date] ?: continue
+                val after = current.days[date] ?: continue
+                val reason = when {
+                    before.shifts != after.shifts || before.absence != after.absence -> PaintReason.SHIFT
+                    before.note != after.note -> PaintReason.NOTE
+                    before.payouts.map { it.rule to it.payment } != after.payouts.map { it.rule to it.payment } -> PaintReason.PAYOUT
+                    before.holidayName != after.holidayName || before.specialDayOff != after.specialDayOff -> PaintReason.HOLIDAY
+                    previous.settings.alarm != current.settings.alarm && previous.alarmMarks(before) != current.alarmMarks(after) -> PaintReason.ALARM
+                    else -> continue
+                }
+                put(date, DayPaint(before.calendarMark(), reason))
+            }
+        }
+    }
+
+    private fun CalendarUiState.alarmMarks(day: DayInfo) =
+        AlarmPlanner.forDay(settings.alarm, day.date, day.shifts).map { Triple(it.ring.alarm.id, it.ring.at, it.on) }
 
     fun select(date: LocalDate) {
         selectedDate.value = date

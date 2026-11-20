@@ -27,9 +27,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.sp
 import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
-import io.github.ceniorpomidor.workcalendar.domain.model.CalendarArt
 import io.github.ceniorpomidor.workcalendar.domain.model.Money
 import io.github.ceniorpomidor.workcalendar.domain.model.PayoutKind
 import io.github.ceniorpomidor.workcalendar.domain.model.ShiftDisplayState
@@ -93,26 +92,26 @@ internal enum class CalendarMark(
     val description: String,
     private val dayInk: Long,
     private val nightInk: Long,
-    val icon: () -> ImageVector,
-    val isWork: Boolean = false,
+    private val paint: Long,
 ) {
-    SHIFT("Смена", "Смена запланирована", 0xFF355775, 0xFFB7CDE2, { AppIcons.Work }, isWork = true),
-    STARTED("Идёт", "Смена идёт сейчас", 0xFF23635C, 0xFFA0D8CE, { AppIcons.Schedule }, isWork = true),
-    AWAITING("Часы?", "Смена окончена, часы ещё не отмечены", 0xFF7A511E, 0xFFE5C18C, { AppIcons.Pending }, isWork = true),
-    CONFIRMED("Учтено", "Часы подтверждены", 0xFF3D6144, 0xFFBCD5AC, { AppIcons.Check }, isWork = true),
-    EXTRA("Доп.", "Дополнительная смена", 0xFF685182, 0xFFCCBAE2, { AppIcons.Add }, isWork = true),
-    MISSED("Пропуск", "Смена не состоялась", 0xFF873F37, 0xFFE2A8A0, { AppIcons.Close }),
-    CANCELLED("Отмена", "Смена отменена", 0xFF5D575F, 0xFFCEC5CF, { AppIcons.Remove }),
-    MOVED("Перенос", "Смена перенесена", 0xFF545682, 0xFFC4C4E2, { AppIcons.ArrowForward }),
-    VACATION("Отпуск", "Отпуск", 0xFF506133, 0xFFD0D8A7, { AppIcons.Vacation }),
-    UNPAID("Б/с", "Отпуск за свой счёт", 0xFF735741, 0xFFE1C6AB, { AppIcons.Vacation }),
-    SICK("Больн.", "Больничный", 0xFF834963, 0xFFE6B7C8, { AppIcons.Sick }),
-    ABSENCE("Отсут.", "Другое отсутствие", 0xFF575C66, 0xFFD2D3DF, { AppIcons.EventBusy }),
+    SHIFT("Смена", "Смена запланирована", 0xFF355775, 0xFFB7CDE2, 0xFF9CC2DC),
+    STARTED("Идёт", "Смена идёт сейчас", 0xFF23635C, 0xFFA0D8CE, 0xFF84C4BC),
+    AWAITING("Часы?", "Смена окончена, часы ещё не отмечены", 0xFF7A511E, 0xFFE5C18C, 0xFFE7BB81),
+    CONFIRMED("Учтено", "Часы подтверждены", 0xFF3D6144, 0xFFBCD5AC, 0xFFA3C59F),
+    EXTRA("Доп.", "Дополнительная смена", 0xFF685182, 0xFFCCBAE2, 0xFFB8A8CF),
+    MISSED("Пропуск", "Смена не состоялась", 0xFF873F37, 0xFFE2A8A0, 0xFFDEA096),
+    CANCELLED("Отмена", "Смена отменена", 0xFF5D575F, 0xFFCEC5CF, 0xFFC3B9BF),
+    MOVED("Перенос", "Смена перенесена", 0xFF545682, 0xFFC4C4E2, 0xFFADAFD1),
+    VACATION("Отпуск", "Отпуск", 0xFF506133, 0xFFD0D8A7, 0xFFBDCA8B),
+    UNPAID("Б/с", "Отпуск за свой счёт", 0xFF735741, 0xFFE1C6AB, 0xFFD3B695),
+    SICK("Больн.", "Больничный", 0xFF834963, 0xFFE6B7C8, 0xFFD9A7BF),
+    ABSENCE("Отсут.", "Другое отсутствие", 0xFF575C66, 0xFFD2D3DF, 0xFFB5BDC4),
     ;
 
     fun ink(style: CalendarStyle) = Color(if (style.dark) nightInk else dayInk)
 
-    fun fill(style: CalendarStyle) = lerp(style.paper, ink(style), if (style.dark) 0.16f else 0.14f)
+    fun fill(style: CalendarStyle) = lerp(style.paper, Color(paint), if (style.dark) 0.30f else 0.80f)
+        .copy(alpha = if (style.wall) 0.87f else 1f)
 }
 
 internal fun DayInfo?.calendarMark(): CalendarMark? = when (this?.state) {
@@ -178,8 +177,8 @@ internal fun DayCell(
     style: CalendarStyle,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    joinsLeft: Boolean = false,
-    joinsRight: Boolean = false,
+    paint: DayPaint?,
+    onPaintFinished: (DayPaint) -> Unit,
 ) {
     val inMonth = day.position == DayPosition.MonthDate
     val isToday = day.date == today
@@ -198,12 +197,14 @@ internal fun DayCell(
     val symbolOnly = small || density.fontScale > 1.25f
     val numberHeight = if (small) 16.dp else 23.dp
     val markerHeight = if (small) 11.dp else 14.dp
-    val shape = RoundedCornerShape(8.dp)
-    val cellBackground = if (style.art == CalendarArt.CLASSIC) mark?.fill(style) ?: Color.Transparent else Color.Transparent
-    val decoration = when {
-        style.art == CalendarArt.CLASSIC -> Modifier.padding(1.dp).clip(shape).background(cellBackground).border(0.7.dp, style.rule, shape)
-        else -> Modifier.calendarRule(style.rule)
+    val progress = sprayProgress(paint, onPaintFinished)
+    val lettering = if (progress == null) Modifier else Modifier.graphicsLayer {
+        alpha = ((progress.value - 0.79f) / 0.21f).coerceIn(0f, 1f)
     }
+    val shape = RoundedCornerShape(if (style.wall) 3.dp else 8.dp)
+    val decoration = Modifier.padding(if (style.wall) 1.5.dp else 1.dp).clip(shape)
+        .dayPaint(style, mark, paint, progress)
+        .then(if (style.wall) Modifier else Modifier.border(0.7.dp, style.rule, shape))
 
     Box(
         Modifier
@@ -226,27 +227,23 @@ internal fun DayCell(
                 if (details.isNotEmpty()) stateDescription = details.joinToString(". ")
             }
             .combinedClickable(
-                onClickLabel = if (payout != null) "Внести полученную сумму" else "Выбрать день",
+                onClickLabel = "Выбрать день",
                 onLongClickLabel = "Добавить смену",
                 onClick = onClick,
                 onLongClick = onLongClick,
             ),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(top = if (small) 0.dp else 2.dp),
+            Modifier.fillMaxWidth().then(lettering).padding(top = if (small) 0.dp else 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             CalendarDate(
                 number = day.date.dayOfMonth,
                 style = style,
-                mark = mark,
-                variant = Math.floorMod(day.date.toEpochDay(), 4L).toInt(),
                 today = isToday,
                 holiday = holiday,
                 small = small,
                 modifier = Modifier.fillMaxWidth().height(numberHeight),
-                joinsLeft = joinsLeft,
-                joinsRight = joinsRight,
             )
             if (hasStatus) {
                 Row(
@@ -255,7 +252,8 @@ internal fun DayCell(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (mark != null) {
-                        CalendarMarkTag(mark, style, symbolOnly = symbolOnly, modifier = Modifier.weight(1f, fill = false))
+                        Text(mark.label, modifier = Modifier.weight(1f, fill = false), style = markerText,
+                            color = style.ink, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
                     if (payout != null) PayoutTag(payout.first, payout.second, style, symbolOnly)
                 }
@@ -281,13 +279,13 @@ internal fun DayCell(
         if (hasExtra) Icon(
             AppIcons.Add,
             contentDescription = null,
-            modifier = Modifier.align(Alignment.TopStart).padding(start = 2.dp, top = 2.dp).size(10.dp),
+            modifier = Modifier.align(Alignment.TopStart).then(lettering).padding(start = 2.dp, top = 2.dp).size(10.dp),
             tint = CalendarMark.EXTRA.ink(style),
         )
         if (hasNote) Icon(
             AppIcons.EditNote,
             contentDescription = null,
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 2.dp, top = 2.dp).size(10.dp),
+            modifier = Modifier.align(Alignment.TopEnd).then(lettering).padding(end = 2.dp, top = 2.dp).size(10.dp),
             tint = style.secondaryInk,
         )
     }
@@ -313,24 +311,11 @@ private fun DayCaption(text: String, style: CalendarStyle) {
     )
 }
 
-@Composable
-internal fun CalendarMarkTag(mark: CalendarMark, style: CalendarStyle, symbolOnly: Boolean, modifier: Modifier = Modifier) {
-    val ink = mark.ink(style)
-    Box(
-        modifier.background(mark.fill(style), tagShape).padding(horizontal = 2.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (symbolOnly || mark == CalendarMark.CONFIRMED) {
-            Icon(mark.icon(), contentDescription = null, modifier = Modifier.size(11.dp), tint = ink)
-        } else {
-            Text(mark.label, style = markerText, color = ink, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-        }
-    }
-}
+internal fun payoutInk(style: CalendarStyle) = if (style.dark) Color(0xFFE7C897) else Color(0xFF775123)
 
 @Composable
 internal fun PayoutTag(label: String, received: Boolean, style: CalendarStyle, symbolOnly: Boolean = false) {
-    val ink = if (style.dark) Color(0xFFE7C897) else Color(0xFF775123)
+    val ink = payoutInk(style)
     val fill = if (received) ink else style.paper
     val foreground = if (received) style.onAccent else ink
     Box(
@@ -354,7 +339,11 @@ internal fun LegendDialog(style: CalendarStyle, onDismiss: () -> Unit) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 CalendarMark.entries.forEach { mark ->
-                    LegendRow(mark.description) { CalendarMarkTag(mark, style, symbolOnly = false) }
+                    LegendRow(mark.description) {
+                        Box(Modifier.size(50.dp, 24.dp).background(mark.fill(style), tagShape), contentAlignment = Alignment.Center) {
+                            Text(mark.label, style = markerText, color = style.ink, maxLines = 1)
+                        }
+                    }
                 }
                 LegendRow("День аванса") { PayoutTag("А", false, style) }
                 LegendRow("День зарплаты") { PayoutTag("З", false, style) }

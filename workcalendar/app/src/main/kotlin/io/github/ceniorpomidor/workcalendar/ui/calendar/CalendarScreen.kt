@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,13 +24,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,6 +44,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kizitonwose.calendar.compose.CalendarState
@@ -161,7 +162,6 @@ fun CalendarScreen(
         dayAlarmsUi(container, state.settings.alarm, selected, dayInfo, today, scope, snackbar, onEditAlarm, onAddAlarm)
     }
 
-    var choosingPayout by rememberSaveable { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf(false) }
     val actions = ShiftActions(
         edit = { onEditShift(it.id) },
@@ -197,6 +197,13 @@ fun CalendarScreen(
 
     val art = state.settings.calendar.art
     val style = calendarStyle(art)
+    val paints = remember(art) { mutableStateMapOf<LocalDate, DayPaint>() }
+    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    LaunchedEffect(state.days, state.settings.alarm, art, lifecycle, editing, visibleMonth) {
+        if (lifecycle == Lifecycle.State.RESUMED && !editing && !state.loading) {
+            paints.putAll(vm.calendarEdits(state, visibleMonth))
+        }
+    }
     Scaffold(
         containerColor = style.background,
         contentColor = style.ink,
@@ -244,18 +251,11 @@ fun CalendarScreen(
                     state = calendarState,
                     dayContent = { day ->
                         val info = state.days[day.date]
-                        val click: () -> Unit = {
-                            vm.select(day.date)
-                            val payouts = info?.payouts.orEmpty()
-                            if (payouts.size == 1) onOpenPayout(payouts.single().key)
-                            if (payouts.size > 1) choosingPayout = true
-                        }
                         val longClick: () -> Unit = {
                             vm.select(day.date)
                             onNewShift(day.date, state.days[day.date]?.shifts?.any { it.isActive } == true)
                         }
                         val date = day.date
-                        val isBand = art == CalendarArt.BANDS && info.calendarMark()?.isWork == true
                         DayCell(
                             day = day,
                             info = info,
@@ -265,12 +265,10 @@ fun CalendarScreen(
                             compact = false,
                             height = cellHeight,
                             style = style,
-                            onClick = click,
+                            paint = paints[date],
+                            onPaintFinished = { pass -> if (paints[date] === pass) paints.remove(date) },
+                            onClick = { vm.select(date) },
                             onLongClick = longClick,
-                            joinsLeft = isBand && date.dayOfWeek != firstDayOfWeek &&
-                                state.days[date.minusDays(1)].calendarMark()?.isWork == true,
-                            joinsRight = isBand && date.plusDays(1).dayOfWeek != firstDayOfWeek &&
-                                state.days[date.plusDays(1)].calendarMark()?.isWork == true,
                         )
                     },
                 )
@@ -295,7 +293,7 @@ fun CalendarScreen(
                 onOpenPayout = { onOpenPayout(it.key) },
                 onOpenUnconfirmed = onOpenUnconfirmed,
                 onSetupSchedule = onSetupSchedule,
-                headingStyle = style.titleStyle.copy(fontSize = if (art == CalendarArt.OFFICE) 23.sp else 16.sp),
+                headingStyle = style.titleStyle.copy(fontSize = if (art == CalendarArt.GRAFFITI) 20.sp else 16.sp),
                 modifier = modifier.padding(horizontal = 12.dp).padding(top = 6.dp, bottom = 4.dp).calendarSheet(style),
             )
         }
@@ -326,23 +324,6 @@ fun CalendarScreen(
                 }
             }
         }
-    }
-    if (choosingPayout && !dayInfo?.payouts.isNullOrEmpty()) {
-        AlertDialog(
-            onDismissRequest = { choosingPayout = false },
-            title = { Text("Выплаты за ${Formats.shortDate(selected)}") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    dayInfo?.payouts.orEmpty().forEach { payout ->
-                        TextButton(onClick = {
-                            choosingPayout = false
-                            onOpenPayout(payout.key)
-                        }) { Text(payout.title.replaceFirstChar { it.uppercase() }) }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { choosingPayout = false }) { Text("Закрыть") } },
-        )
     }
     if (legend) LegendDialog(style) { legend = false }
     if (editing) {
