@@ -158,11 +158,11 @@ $UI route "calendar"
 $UI dump calendar-green 1 "=Будильник" || exit 1
 
 # Switch each calendar skin through Settings and verify the month is still interactive.
-for theme in "Синие ленты" "Пастель" "Комикс" "Граффити" "Офисные стикеры" "Текущее оформление"; do
+for theme in "Граффити" "Основная"; do
   $UI route "settings/display"
   $UI tap "Тема календаря ·" 0 1 15 || exit 1
-  if [ "$theme" = "Синие ленты" ]; then
-    $UI dump theme-picker 0 "Тема календаря" "Офисные стикеры" || exit 1
+  if [ "$theme" = "Граффити" ]; then
+    $UI dump theme-picker 0 "Тема календаря" "=Основная" "=Граффити" || exit 1
   fi
   $UI tap-until "$theme" "Тема календаря · $theme" || exit 1
   $UI route "calendar"
@@ -312,6 +312,8 @@ if [ "$(adb shell date +%F | tr -d '\r')" = "$D1" ]; then
   $UI route "day/$PAYDAY"
   PAYDAY_RU=$(date -d "$PAYDAY" +%d.%m.%Y)
   $UI tap "День выплаты, $PAYDAY_RU" 1 || exit 1
+  $UI dump payday-selected 0 "Изменить" "Аванс за" || exit 1
+  $UI tap "Аванс за" 0 0 || exit 1
   $UI dump calendar-receipt 1 "Фактическая сумма" "12500,50" || exit 1
   $UI tap "Фактическая сумма" || exit 1
   adb shell input keycombination 113 29
@@ -320,6 +322,8 @@ if [ "$(adb shell date +%F | tr -d '\r')" = "$D1" ]; then
   $UI tap "Сохранить" 1 || exit 1
   $UI wait calendar-receipt-saved "Изменить" 20 || exit 1
   $UI tap "День выплаты, $PAYDAY_RU" 1 || exit 1
+  $UI dump payday-reselected 0 "Изменить" "Аванс за" || exit 1
+  $UI tap "Аванс за" 0 0 || exit 1
   $UI dump calendar-receipt-edited 0 "13000,75" || exit 1
 else
   echo "!! the emulator clock could not be changed, notification flow skipped"

@@ -11,12 +11,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,16 +37,9 @@ internal fun CalendarArtPicker(current: CalendarArt, onDismiss: () -> Unit, onSe
         onDismissRequest = onDismiss,
         title = { Text("Тема календаря") },
         text = {
-            Column(
-                Modifier.fillMaxWidth().selectableGroup().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                for (themes in CalendarArt.entries.chunked(2)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        for (theme in themes) {
-                            CalendarThemeOption(theme, current == theme, Modifier.weight(1f)) { onSelect(theme) }
-                        }
-                    }
+            Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                for (art in CalendarArt.entries) {
+                    CalendarThemeOption(art, current == art, Modifier.weight(1f)) { onSelect(art) }
                 }
             }
         },
@@ -94,28 +85,25 @@ private fun CalendarThemeSample(style: CalendarStyle) {
     Column(Modifier.fillMaxWidth().calendarBackdrop(style).padding(4.dp)) {
         Text(
             "Ноябрь",
-            style = style.titleStyle.copy(fontSize = if (style.art == CalendarArt.OFFICE) 20.sp else 13.sp),
+            style = style.titleStyle.copy(fontSize = if (style.wall) 18.sp else 13.sp),
             color = style.ink,
             maxLines = 1,
         )
-        Row(Modifier.fillMaxWidth().calendarSheet(style).padding(vertical = 3.dp)) {
+        Row(Modifier.fillMaxWidth().calendarSheet(style, textured = true).padding(vertical = 3.dp)) {
             val marks = listOf(CalendarMark.SHIFT, CalendarMark.CONFIRMED, CalendarMark.VACATION)
             for ((index, mark) in marks.withIndex()) {
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.weight(1f).padding(1.dp).clip(RoundedCornerShape(3.dp)).dayPaint(style, mark, null, null),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
                     CalendarDate(
                         number = 17 + index,
                         style = style,
-                        mark = mark,
-                        variant = index,
                         today = false,
                         holiday = false,
                         small = false,
                         modifier = Modifier.fillMaxWidth().height(22.dp),
-                        joinsLeft = index == 1,
-                        joinsRight = index == 0,
                     )
                     if (index == 2) PayoutTag("А", received = false, style = style)
-                    else CalendarMarkTag(mark, style, symbolOnly = true)
+                    else Text(mark.label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp), color = style.ink, maxLines = 1)
                 }
             }
         }

@@ -1,5 +1,7 @@
 package io.github.ceniorpomidor.workcalendar.domain
 
+import io.github.ceniorpomidor.workcalendar.domain.backup.BackupCodec
+import io.github.ceniorpomidor.workcalendar.domain.model.CalendarArt
 import io.github.ceniorpomidor.workcalendar.domain.color.ThemeColors
 import io.github.ceniorpomidor.workcalendar.domain.color.Tones
 import io.github.ceniorpomidor.workcalendar.domain.model.ColorPalette
@@ -18,6 +20,18 @@ class AppearanceTest {
         "surfaceVariant" to (onSurfaceVariant to surfaceContainerHighest),
         "inverse" to (inverseOnSurface to inverseSurface),
     )
+
+    @Test
+    fun `retired calendar styles keep the rest of the saved settings`() {
+        for (name in listOf("OFFICE", "BANDS", "COMIC", "AURORA", "CLASSIC", "GRAFFITI")) {
+            val json = """{"settings":{"calendar":{"art":"$name","showHolidays":false}}}"""
+            val backup = BackupCodec.decode(json)
+            val expected = if (name == "GRAFFITI") CalendarArt.GRAFFITI else CalendarArt.CLASSIC
+            assertEquals(expected, backup.settings.calendar.art)
+            assertEquals(false, backup.settings.calendar.showHolidays)
+            assertEquals(backup, BackupCodec.decode(BackupCodec.encode(backup)))
+        }
+    }
 
     @Test
     fun `text is readable in every palette`() {

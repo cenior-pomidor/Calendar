@@ -1,5 +1,7 @@
 package io.github.ceniorpomidor.workcalendar.ui.calendar
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -96,7 +98,7 @@ fun DayPanel(
     headingStyle: TextStyle = MaterialTheme.typography.titleMedium,
 ) {
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
-        Column(Modifier.weight(1f, fill = true), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.weight(1f, fill = true).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     Formats.dayTitle(date).replaceFirstChar { it.uppercase() },
@@ -221,7 +223,8 @@ private fun PayoutLine(payout: PayoutInstance, onClick: () -> Unit) {
             expected != null -> append(": ≈ ${money(expected)}")
         }
     }
-    InfoLine(AppIcons.Wallet, text, AppTheme.status.onPayday, onClick = onClick)
+    InfoLine(AppIcons.Wallet, text, AppTheme.status.onPayday, onClick = onClick,
+        actionLabel = if (received == null) "Внести полученную сумму" else "Изменить полученную сумму")
 }
 
 @Composable
@@ -254,13 +257,17 @@ private fun ExtrasLine(alarms: List<AlarmOfDay>, note: String?) {
 }
 
 @Composable
-private fun InfoLine(icon: ImageVector, text: String, color: Color, onClick: (() -> Unit)? = null) {
+private fun InfoLine(icon: ImageVector, text: String, color: Color, onClick: (() -> Unit)? = null, actionLabel: String? = null) {
     Row(
-        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClickLabel = actionLabel, onClick = onClick) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, modifier = Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (actionLabel != null) {
+            Spacer(Modifier.width(4.dp))
+            Icon(AppIcons.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = color)
+        }
     }
 }
