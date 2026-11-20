@@ -1,1 +1,92 @@
 
+name: Gemini Autonomous Coder
+
+on:
+  # 1. Запуск при упоминании @gemini-cli в новой задаче или комментарии к ней
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+  # 2. Запуск по расписанию (пример: каждый день в 03:00 UTC)
+  schedule:
+    - cron: '0 3 * * *'
+  # 3. Возможность запустить вручную через вкладку Actions
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Задача для Gemini'
+        required: true
+        default: 'Проверь репозиторий на баги, обнови зависимости и предложи улучшения'
+
+permissions:
+  contents: write      # Право создавать ветки и изменять файлы
+  pull-requests: write # Право открывать Pull Request
+  issues: write        # Право отвечать в комментариях к Issue
+
+jobs:
+  gemini-code:
+    # Запускаем только по расписанию, ручному старту ИЛИ если владелец/участник репозитория написал @gemini-cli
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (
+        contains(github.event.comment.body || github.event.issue.body, '@gemini-cli') &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association || github.event.issue.author_association)
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Скачать репозиторий
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Настроить Git
+        run: |
+          git config user.name "gemini-cli[bot]"
+          git config user.email "gemini-cli[bot]@users.noreply.github.com"
+
+      - name: Сформировать задание для агента
+        id: task
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          MANUAL_TASK: ${{ github.event.inputs.task }}
+        run: |
+          {
+            echo 'prompt<<EOF'
+            if [ "$EVENT_NAME" = "schedule" ]; then
+              echo "Запланированный запуск. Проанализируй кодовую базу: найди потенциальные ошибки, устаревший код или отсутствующие тесты. Внеси точечные улучшения."
+            elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+              echo "Ручной запуск. Задача: $MANUAL_TASK"
+            else
+              echo "Задача из GitHub Issue #$ISSUE_NUM: $ISSUE_TITLE"
+              echo "Описание: $ISSUE_BODY"
+              echo "Комментарий с вызовом: $COMMENT_BODY"
+            fi
+            echo ""
+            echo "ИНСТРУКЦИЯ ПО ВЫПОЛНЕНИЮ:"
+            echo "1. Изучи структуру проекта и напиши/измени нужные файлы."
+            echo "2. Создай новую ветку от main (например, feat/gemini-$(date +%s))."
+            echo "3. Закоммить изменения и отправь ветку в origin (git push -u origin <ветка>)."
+            echo "4. Используй установленную утилиту gh, чтобы открыть Pull Request в main (gh pr create --fill) и привязать его к Issue #$ISSUE_NUM (если применимо)."
+            echo "5. Оставь короткий комментарий в Issue #$ISSUE_NUM со ссылкой на созданный PR."
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Запустить Gemini CLI
+        uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          prompt: ${{ steps.task.outputs.prompt }}
+          settings: |
+            {
+              "tools": {
+                "autoAccept": true
+              }
+            }
