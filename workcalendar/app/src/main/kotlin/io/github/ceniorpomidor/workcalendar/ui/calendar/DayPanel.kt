@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -92,13 +93,14 @@ fun DayPanel(
     onOpenUnconfirmed: () -> Unit,
     onSetupSchedule: () -> Unit,
     modifier: Modifier = Modifier,
+    headingStyle: TextStyle = MaterialTheme.typography.titleMedium,
 ) {
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
         Column(Modifier.weight(1f, fill = true), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     Formats.dayTitle(date).replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.titleMedium,
+                    style = headingStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
