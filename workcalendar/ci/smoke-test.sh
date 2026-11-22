@@ -168,6 +168,22 @@ for theme in "Граффити" "Стандартная"; do
   $UI route "calendar"
   $UI tap "Сегодня" 1 || exit 1
   $UI dump "theme-$theme" 0 "Изменить" || exit 1
+  if [ "$theme" = "Граффити" ]; then
+    # The runner starts with the hardware display size and density.
+    adb shell wm size 720x1440
+    adb shell wm density 320
+    adb shell settings put system font_scale 1.3
+    $UI route "calendar"
+    $UI dump sketch-360dp 0 "Изменить" "Отметить" || exit 1
+    $UI route "finance"
+    $UI dump sketch-finance 0 "Финансы" || exit 1
+    $UI route "settings/display"
+    $UI dump sketch-settings 0 "Тема приложения · Граффити" || exit 1
+    adb shell wm size reset
+    adb shell wm density reset
+    adb shell settings put system font_scale 1
+    $UI route "calendar"
+  fi
 done
 
 # ---- Alarms: before every shift, one more at 06:30 on working days, one on a day off, test ring ----
