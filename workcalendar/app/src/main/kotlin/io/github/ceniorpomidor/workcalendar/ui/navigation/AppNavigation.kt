@@ -1,5 +1,6 @@
 package io.github.ceniorpomidor.workcalendar.ui.navigation
 
+import io.github.ceniorpomidor.workcalendar.ui.theme.*
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -25,6 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.Lifecycle
@@ -98,7 +101,7 @@ private fun String?.toDateOrNull(): LocalDate? = this?.takeIf { it.isNotBlank() 
 fun WorkCalendarRoot(container: AppContainer, pendingRoute: String?, onRouteHandled: () -> Unit) {
     val settingsState = container.settings.settings.collectAsStateWithLifecycle(initialValue = null)
     val current = settingsState.value ?: AppSettings()
-    WorkCalendarTheme(themeMode = current.theme, dynamicColor = current.dynamicColor, appearance = current.appearance) {
+    WorkCalendarTheme(appTheme = current.calendar.art, themeMode = current.theme, dynamicColor = current.dynamicColor, appearance = current.appearance) {
         val snackbar = remember { SnackbarHostState() }
         CompositionLocalProvider(LocalSnackbar provides snackbar, LocalCurrency provides current.currency) {
             if (settingsState.value != null) {
@@ -450,7 +453,9 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
             }
         }
         if (showBottomBar) {
-            NavigationBar {
+            NavigationBar(modifier = if (LocalSketch.current) Modifier.drawBehind {
+                drawLine(Sketch.ink, androidx.compose.ui.geometry.Offset.Zero, androidx.compose.ui.geometry.Offset(size.width, 0f), 3.dp.toPx())
+            } else Modifier) {
                 for (item in navItems) {
                     val info = item.info
                     val selected = currentRoute == info.route

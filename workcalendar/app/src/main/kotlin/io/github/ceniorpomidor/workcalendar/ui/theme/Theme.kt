@@ -185,12 +185,14 @@ object AppTheme {
 
 @Composable
 fun WorkCalendarTheme(
+    appTheme: io.github.ceniorpomidor.workcalendar.domain.model.AppTheme = io.github.ceniorpomidor.workcalendar.domain.model.AppTheme.DEFAULT,
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = true,
     appearance: AppearanceSettings = AppearanceSettings(),
     content: @Composable () -> Unit,
 ) {
-    val dark = when (themeMode) {
+    val street = appTheme == io.github.ceniorpomidor.workcalendar.domain.model.AppTheme.GRAFFITI
+    val dark = !street && when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
@@ -200,7 +202,7 @@ fun WorkCalendarTheme(
     val generated = remember(appearance.palette, appearance.customHue, dark, pureBlack) {
         ThemeColors.of(appearance.palette, appearance.customHue, dark, pureBlack).toColorScheme(dark)
     }
-    val colors = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val colors = if (street) Sketch.colors else if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val wallpaper = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         if (pureBlack) wallpaper.withPureBlack() else wallpaper
     } else {
@@ -217,7 +219,8 @@ fun WorkCalendarTheme(
             }
         }
     }
-    CompositionLocalProvider(LocalStatusPalette provides if (dark) DarkStatus else LightStatus) {
-        MaterialTheme(colorScheme = colors, content = content)
+    CompositionLocalProvider(LocalSketch provides street, LocalStatusPalette provides if (dark) DarkStatus else LightStatus) {
+        if (street) MaterialTheme(colorScheme = colors, typography = Sketch.type, content = content)
+        else MaterialTheme(colorScheme = colors, content = content)
     }
 }

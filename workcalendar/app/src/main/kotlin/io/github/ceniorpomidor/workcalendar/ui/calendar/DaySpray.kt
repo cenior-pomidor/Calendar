@@ -1,5 +1,6 @@
 package io.github.ceniorpomidor.workcalendar.ui.calendar
 
+import io.github.ceniorpomidor.workcalendar.ui.theme.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -12,18 +13,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.res.imageResource
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import io.github.ceniorpomidor.workcalendar.R
-import kotlin.math.roundToInt
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -47,9 +44,29 @@ private val mist = Random(32).let { random ->
     List(42) { Offset(random.nextFloat() * 2 - 1, random.nextFloat() * 2 - 1) }
 }
 
-private fun DrawScope.spraySwatch(mask: ImageBitmap, tint: ColorFilter?, alpha: Float = 1f) {
-    if (tint != null) {
-        drawImage(mask, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()), colorFilter = tint, alpha = alpha)
+private fun DrawScope.marker(mark: CalendarMark?, style: CalendarStyle, seed: Long) {
+    val w = size.width
+    val h = size.height
+    val skew = ((seed xor (seed ushr 7)).mod(9) - 4) * .006f * h
+    fun stroke(color: Color, y: Float, width: Float) {
+        val path = Path().apply {
+            moveTo(.09f*w, y*h + skew)
+            quadraticTo(.46f*w, y*h - skew - 2.dp.toPx(), .91f*w, y*h - skew)
+        }
+        drawPath(path, color, style = Stroke(width, cap = StrokeCap.Round))
+    }
+    when (mark) {
+        null -> Unit
+        CalendarMark.CONFIRMED -> stroke(Sketch.lime.copy(alpha = .82f), .28f, minOf(.26f*h, 17.dp.toPx()))
+        CalendarMark.STARTED -> {
+            stroke(Sketch.blue, .86f, 2.dp.toPx())
+            stroke(Sketch.blue, .93f, 1.dp.toPx())
+            val tip = Offset(.85f * w, .10f * h)
+            drawLine(Sketch.blue, tip - Offset(4.dp.toPx(), -2.dp.toPx()), tip, 1.5.dp.toPx())
+            drawLine(Sketch.blue, tip, tip + Offset(0f, 4.dp.toPx()), 1.5.dp.toPx())
+        }
+        CalendarMark.SHIFT -> stroke(Sketch.violet, .91f, 2.dp.toPx())
+        else -> stroke(mark.fill(style), .29f, minOf(.27f*h, 18.dp.toPx()))
     }
 }
 
@@ -59,21 +76,17 @@ internal fun Modifier.dayPaint(
     mark: CalendarMark?,
     pass: DayPaint?,
     progress: State<Float>?,
+    seed: Long = 0L,
 ): Modifier {
     val fill = mark?.fill(style) ?: Color.Transparent
     if (!style.wall) return background(fill)
-    val mask = ImageBitmap.imageResource(R.drawable.calendar_spray)
-    val newTint = remember(fill) { mark?.let { ColorFilter.tint(fill) } }
-    if (pass == null || progress == null) return if (newTint == null) this else drawBehind { spraySwatch(mask, newTint) }
-    val old = pass.previous?.fill(style) ?: Color.Transparent
+    if (pass == null || progress == null) return drawBehind { marker(mark, style, seed) }
     val pigment = when (pass.reason) {
         PaintReason.SHIFT -> mark?.ink(style) ?: style.paper
         PaintReason.PAYOUT -> payoutInk(style)
         PaintReason.NOTE, PaintReason.ALARM -> style.accent
         PaintReason.HOLIDAY -> style.holiday
     }
-    val oldTint = remember(old) { pass.previous?.let { ColorFilter.tint(old) } }
-    val wetTint = remember(pigment) { ColorFilter.tint(pigment) }
     val wipe = remember(pass) { Path() }
     return drawBehind {
         val t = progress.value
@@ -98,10 +111,10 @@ internal fun Modifier.dayPaint(
             wipe.lineTo(0f, seam)
         }
         wipe.close()
-        clipPath(wipe, ClipOp.Difference) { spraySwatch(mask, oldTint) }
+        clipPath(wipe, ClipOp.Difference) { marker(pass.previous, style, seed) }
         clipPath(wipe) {
-            spraySwatch(mask, newTint)
-            spraySwatch(mask, wetTint, alpha = 0.52f * (1 - t))
+            marker(mark, style, seed)
+            drawRect(pigment, alpha = 0.52f * (1 - t))
         }
         if (swept < 1f) {
             val headY = h * (0.15f + swept * 0.72f)

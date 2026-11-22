@@ -1,5 +1,6 @@
 package io.github.ceniorpomidor.workcalendar.ui.calendar
 
+import io.github.ceniorpomidor.workcalendar.ui.theme.*
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.horizontalScroll
@@ -56,7 +57,7 @@ import com.kizitonwose.calendar.core.OutDateStyle
 import com.kizitonwose.calendar.core.daysOfWeek
 import io.github.ceniorpomidor.workcalendar.AppContainer
 import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmPlanner
-import io.github.ceniorpomidor.workcalendar.domain.model.CalendarArt
+import io.github.ceniorpomidor.workcalendar.domain.model.AppTheme
 import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
 import io.github.ceniorpomidor.workcalendar.domain.model.AlarmItem
 import io.github.ceniorpomidor.workcalendar.domain.model.AlarmRepeat
@@ -216,7 +217,7 @@ fun CalendarScreen(
                     actionIconContentColor = style.ink,
                 ),
                 title = {
-                    BasicText(
+                    if (style.wall) MonthTag(Formats.monthTitle(visibleMonth), visibleMonth.monthValue) else BasicText(
                         Formats.monthTitle(visibleMonth),
                         style = style.titleStyle.copy(color = style.ink),
                         maxLines = if (style.wall) 1 else 2,
@@ -294,7 +295,7 @@ fun CalendarScreen(
                 onOpenPayout = { onOpenPayout(it.key) },
                 onOpenUnconfirmed = onOpenUnconfirmed,
                 onSetupSchedule = onSetupSchedule,
-                headingStyle = style.titleStyle.copy(fontSize = if (art == CalendarArt.GRAFFITI) 20.sp else 16.sp),
+                headingStyle = style.titleStyle.copy(fontSize = if (art == AppTheme.GRAFFITI) 20.sp else 16.sp),
                 modifier = modifier.padding(horizontal = 12.dp).padding(top = 6.dp, bottom = 4.dp).calendarSheet(style),
             )
         }
@@ -430,8 +431,9 @@ private fun MonthSummaryRow(summary: PeriodSummary?, style: CalendarStyle, onCli
 private fun SummaryTile(label: String, value: String, style: CalendarStyle, onClick: () -> Unit, valueColor: Color = style.ink) {
     Card(
         onClick = onClick,
+        modifier = Modifier.sticker(style.wall),
         colors = CardDefaults.cardColors(containerColor = style.paper, contentColor = style.ink),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(if (style.wall) 8.dp else 14.dp),
     ) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.Start) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = style.secondaryInk)

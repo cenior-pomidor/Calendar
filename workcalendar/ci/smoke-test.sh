@@ -158,13 +158,13 @@ $UI route "calendar"
 $UI dump calendar-green 1 "=Будильник" || exit 1
 
 # Switch each calendar skin through Settings and verify the month is still interactive.
-for theme in "Граффити" "Основная"; do
+for theme in "Граффити" "Стандартная"; do
   $UI route "settings/display"
-  $UI tap "Тема календаря ·" 0 1 15 || exit 1
+  $UI tap "Тема приложения ·" 0 1 15 || exit 1
   if [ "$theme" = "Граффити" ]; then
-    $UI dump theme-picker 0 "Тема календаря" "=Основная" "=Граффити" || exit 1
+    $UI dump theme-picker 0 "Тема приложения" "=Стандартная" "=Граффити" || exit 1
   fi
-  $UI tap-until "$theme" "Тема календаря · $theme" || exit 1
+  $UI tap-until "$theme" "Тема приложения · $theme" || exit 1
   $UI route "calendar"
   $UI tap "Сегодня" 1 || exit 1
   $UI dump "theme-$theme" 0 "Изменить" || exit 1

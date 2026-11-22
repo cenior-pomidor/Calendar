@@ -1,5 +1,6 @@
 package io.github.ceniorpomidor.workcalendar.ui.calendar
 
+import io.github.ceniorpomidor.workcalendar.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -129,7 +130,9 @@ internal fun DayInfo?.calendarMark(): CalendarMark? = when (this?.state) {
     DayState.OTHER_ABSENCE -> CalendarMark.ABSENCE
 }
 
-private val markerText = TextStyle(
+private val markerText: TextStyle
+    @Composable get() = TextStyle(
+    fontFamily = if (LocalSketch.current) Sketch.hand else null,
     fontSize = 9.sp,
     lineHeight = 11.sp,
     fontWeight = FontWeight.SemiBold,
@@ -203,16 +206,16 @@ internal fun DayCell(
     }
     val shape = RoundedCornerShape(if (style.wall) 3.dp else 8.dp)
     val decoration = Modifier.padding(if (style.wall) 1.5.dp else 1.dp).clip(shape)
-        .dayPaint(style, mark, paint, progress)
-        .then(if (style.wall) Modifier else Modifier.border(0.7.dp, style.rule, shape))
+        .dayPaint(style, mark, paint, progress, day.date.toEpochDay())
+        .then(if (style.wall) Modifier.border(.65.dp, Sketch.ink.copy(alpha = .30f), shape) else Modifier.border(0.7.dp, style.rule, shape))
 
     Box(
         Modifier
             .fillMaxWidth()
             .height(height)
-            .alpha(if (inMonth) 1f else 0.58f)
+            .alpha(if (inMonth) 1f else if (style.wall) .84f else .58f)
             .then(decoration)
-            .then(if (selected) Modifier.border(1.5.dp, style.accent, shape) else Modifier)
+            .then(if (selected && !style.wall) Modifier.border(1.5.dp, style.accent, shape) else Modifier)
             .semantics {
                 this.selected = selected
                 contentDescription = if (payout != null) "День выплаты, ${Formats.date(day.date)}" else Formats.dayTitle(day.date)
@@ -241,6 +244,8 @@ internal fun DayCell(
                 number = day.date.dayOfMonth,
                 style = style,
                 today = isToday,
+                circled = selected || isToday,
+                seed = day.date.toEpochDay(),
                 holiday = holiday,
                 small = small,
                 modifier = Modifier.fillMaxWidth().height(numberHeight),
@@ -316,13 +321,19 @@ internal fun payoutInk(style: CalendarStyle) = if (style.dark) Color(0xFFE7C897)
 @Composable
 internal fun PayoutTag(label: String, received: Boolean, style: CalendarStyle, symbolOnly: Boolean = false) {
     val ink = payoutInk(style)
-    val fill = if (received) ink else style.paper
-    val foreground = if (received) style.onAccent else ink
+    val fill = when {
+        !style.wall -> if (received) ink else style.paper
+        received -> Sketch.orange
+        label == "З" -> Sketch.pink
+        label == "А" -> Color(0xFFFFD766)
+        else -> Sketch.lime
+    }
+    val foreground = if (style.wall) Sketch.ink else if (received) style.onAccent else ink
     Box(
-        Modifier.widthIn(min = 13.dp).background(fill, tagShape).border(0.75.dp, ink.copy(alpha = 0.72f), tagShape).padding(horizontal = 2.dp),
+        Modifier.widthIn(min = 13.dp).background(fill, tagShape).border(if (style.wall) 1.dp else 0.75.dp, if (style.wall) Sketch.ink else ink.copy(alpha = 0.72f), tagShape).padding(horizontal = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (symbolOnly) {
+        if (symbolOnly && !style.wall) {
             Icon(AppIcons.Wallet, contentDescription = null, modifier = Modifier.size(10.dp), tint = foreground)
         } else {
             Text(label, style = markerText, color = foreground, maxLines = 1)
@@ -340,7 +351,7 @@ internal fun LegendDialog(style: CalendarStyle, onDismiss: () -> Unit) {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 CalendarMark.entries.forEach { mark ->
                     LegendRow(mark.description) {
-                        Box(Modifier.size(50.dp, 24.dp).background(mark.fill(style), tagShape), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(50.dp, 24.dp).clip(tagShape).dayPaint(style, mark, null, null), contentAlignment = Alignment.Center) {
                             Text(mark.label, style = markerText, color = style.ink, maxLines = 1)
                         }
                     }

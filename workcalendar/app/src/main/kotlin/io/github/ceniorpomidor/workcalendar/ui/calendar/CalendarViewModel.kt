@@ -9,7 +9,7 @@ import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmPlanner
 import io.github.ceniorpomidor.workcalendar.domain.model.Absence
 import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
 import io.github.ceniorpomidor.workcalendar.domain.model.AppSettings
-import io.github.ceniorpomidor.workcalendar.domain.model.CalendarArt
+import io.github.ceniorpomidor.workcalendar.domain.model.AppTheme
 import io.github.ceniorpomidor.workcalendar.domain.model.ManualAccrual
 import io.github.ceniorpomidor.workcalendar.domain.model.Money
 import io.github.ceniorpomidor.workcalendar.domain.model.Payment
@@ -158,8 +158,8 @@ class CalendarViewModel(private val c: AppContainer) : ViewModel() {
         if (current.month != visibleMonth) return emptyMap()
         val previous = displayed
         displayed = current
-        if (current.settings.calendar.art != CalendarArt.GRAFFITI ||
-            previous?.settings?.calendar?.art != CalendarArt.GRAFFITI || previous.month != current.month
+        if (current.settings.calendar.art != AppTheme.GRAFFITI ||
+            previous?.settings?.calendar?.art != AppTheme.GRAFFITI || previous.month != current.month
         ) return emptyMap()
         val first = visibleMonth.atDay(1).with(previousOrSame(current.settings.calendar.firstDayOfWeek))
         return buildMap {

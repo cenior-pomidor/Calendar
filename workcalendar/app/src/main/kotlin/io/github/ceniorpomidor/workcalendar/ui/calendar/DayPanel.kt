@@ -1,5 +1,6 @@
 package io.github.ceniorpomidor.workcalendar.ui.calendar
 
+import io.github.ceniorpomidor.workcalendar.ui.theme.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
@@ -137,7 +138,7 @@ fun DayPanel(
                 Spacer(Modifier.width(6.dp))
                 Text("Изменить", maxLines = 1)
             }
-            Button(onClick = onMark, enabled = markEnabled, modifier = Modifier.weight(1f)) {
+            Button(onClick = onMark, enabled = markEnabled, border = if (LocalSketch.current && markEnabled) androidx.compose.foundation.BorderStroke(2.dp, Sketch.ink) else null, modifier = Modifier.weight(1f)) {
                 Icon(AppIcons.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(markLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)

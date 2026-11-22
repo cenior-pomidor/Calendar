@@ -1,5 +1,6 @@
 package io.github.ceniorpomidor.workcalendar.ui.components
 
+import io.github.ceniorpomidor.workcalendar.ui.theme.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -124,6 +125,7 @@ fun ScrollColumn(padding: PaddingValues, modifier: Modifier = Modifier, content:
     Column(
         modifier = modifier
             .fillMaxSize()
+            .then(if (LocalSketch.current) Modifier.paperGrain() else Modifier)
             .padding(padding)
             .consumeWindowInsets(padding)
             .imePadding()
@@ -143,9 +145,9 @@ fun SectionCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().sticker(LocalSketch.current),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(if (LocalSketch.current) 8.dp else 20.dp),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (title != null) {
