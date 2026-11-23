@@ -220,7 +220,10 @@ fun WorkCalendarTheme(
         }
     }
     CompositionLocalProvider(LocalSketch provides street, LocalStatusPalette provides if (dark) DarkStatus else LightStatus) {
-        if (street) MaterialTheme(colorScheme = colors, typography = Sketch.type, content = content)
-        else MaterialTheme(colorScheme = colors, content = content)
+        MaterialTheme(
+            colorScheme = colors,
+            typography = if (street) Sketch.type else MaterialTheme.typography,
+            content = content,
+        )
     }
 }
