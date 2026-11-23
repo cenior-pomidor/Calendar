@@ -1,7 +1,7 @@
 package io.github.ceniorpomidor.workcalendar.domain
 
 import io.github.ceniorpomidor.workcalendar.domain.backup.BackupCodec
-import io.github.ceniorpomidor.workcalendar.domain.model.CalendarArt
+import io.github.ceniorpomidor.workcalendar.domain.model.AppTheme
 import io.github.ceniorpomidor.workcalendar.domain.color.ThemeColors
 import io.github.ceniorpomidor.workcalendar.domain.color.Tones
 import io.github.ceniorpomidor.workcalendar.domain.model.ColorPalette
@@ -26,7 +26,7 @@ class AppearanceTest {
         for (name in listOf("OFFICE", "BANDS", "COMIC", "AURORA", "CLASSIC", "GRAFFITI")) {
             val json = """{"settings":{"calendar":{"art":"$name","showHolidays":false}}}"""
             val backup = BackupCodec.decode(json)
-            val expected = if (name == "GRAFFITI") CalendarArt.GRAFFITI else CalendarArt.CLASSIC
+            val expected = if (name == "GRAFFITI") AppTheme.GRAFFITI else AppTheme.DEFAULT
             assertEquals(expected, backup.settings.calendar.art)
             assertEquals(false, backup.settings.calendar.showHolidays)
             assertEquals(backup, BackupCodec.decode(BackupCodec.encode(backup)))

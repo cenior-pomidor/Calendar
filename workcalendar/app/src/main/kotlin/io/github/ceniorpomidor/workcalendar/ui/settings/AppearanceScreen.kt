@@ -96,7 +96,8 @@ fun AppearanceScreen(container: AppContainer, settings: AppSettings, onBack: () 
     }
     SubScreen(title = "Оформление", onBack = onBack) { padding ->
         ScrollColumn(padding) {
-            SectionCard(title = "Тема", icon = AppIcons.Contrast) {
+            SectionCard(title = "Оформление приложения", icon = AppIcons.Contrast) {
+                TextButton(onClick = { chooseArt = true }) { Text("Тема приложения · ${c.art.title}") }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(ThemeMode.SYSTEM to "Как в системе", ThemeMode.LIGHT to "Светлая", ThemeMode.DARK to "Тёмная").forEach { (mode, label) ->
                         FilterChip(selected = settings.theme == mode, onClick = { update { it.copy(theme = mode) } }, label = { Text(label) })
@@ -113,7 +114,6 @@ fun AppearanceScreen(container: AppContainer, settings: AppSettings, onBack: () 
                 NavItemsEditor(settings, update)
             }
             SectionCard(title = "Календарь", icon = AppIcons.CalendarMonth) {
-                TextButton(onClick = { chooseArt = true }) { Text("Тема календаря · ${c.art.title}") }
                 Text("Первый день недели", style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY, DayOfWeek.SATURDAY).forEach { day ->

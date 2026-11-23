@@ -120,10 +120,11 @@ enum class ApplyFromDefault {
 
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
-enum class CalendarArt(val title: String) {
+enum class AppTheme(val title: String) {
     // Keep settings and backups written by 1.5.x readable when a skin is retired.
+    @kotlinx.serialization.SerialName("CLASSIC")
     @JsonNames("BANDS", "AURORA", "COMIC", "OFFICE")
-    CLASSIC("Основная"),
+    DEFAULT("Стандартная"),
     GRAFFITI("Граффити"),
 }
 
@@ -135,7 +136,7 @@ data class CalendarSettings(
     val showDayEarnings: Boolean = false,
     val showHolidays: Boolean = true,
     val showMonthSummary: Boolean = true,
-    val art: CalendarArt = CalendarArt.CLASSIC,
+    val art: AppTheme = AppTheme.DEFAULT,
 )
 
 @Serializable
@@ -208,7 +209,7 @@ data class AppSettings(
     /** Date since which all shifts and earnings are recorded in the app. */
     val trackingStartDate: LocalDate? = null,
     val currency: String = "₽",
-    val theme: ThemeMode = ThemeMode.SYSTEM,
+    val theme: ThemeMode = ThemeMode.DARK,
     val dynamicColor: Boolean = true,
     val appearance: AppearanceSettings = AppearanceSettings(),
     val alarm: AlarmSettings = AlarmSettings(),

@@ -72,7 +72,7 @@ class WakeAlarmActivity : ComponentActivity() {
                 finish()
             }
             val s = settings ?: AppSettings()
-            WorkCalendarTheme(themeMode = s.theme, dynamicColor = s.dynamicColor, appearance = s.appearance) {
+            WorkCalendarTheme(appTheme = s.calendar.art, themeMode = s.theme, dynamicColor = s.dynamicColor, appearance = s.appearance) {
                 AlarmContent(
                     alarm = alarm,
                     now = { container.clock.now() },

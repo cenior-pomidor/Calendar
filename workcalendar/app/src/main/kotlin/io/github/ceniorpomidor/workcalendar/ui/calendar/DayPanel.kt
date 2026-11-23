@@ -1,5 +1,10 @@
 package io.github.ceniorpomidor.workcalendar.ui.calendar
 
+import io.github.ceniorpomidor.workcalendar.ui.theme.*
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
@@ -97,9 +102,21 @@ fun DayPanel(
     modifier: Modifier = Modifier,
     headingStyle: TextStyle = MaterialTheme.typography.titleMedium,
 ) {
+    val sketch = LocalSketch.current
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
         Column(Modifier.weight(1f, fill = true).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            if (sketch) {
+                BasicText(
+                    Formats.dayTitle(date).replaceFirstChar { it.uppercase() },
+                    Modifier.fillMaxWidth(),
+                    style = headingStyle.copy(color = Sketch.ink, letterSpacing = 0.sp),
+                    maxLines = 1, softWrap = false,
+                    autoSize = TextAutoSize.StepBased(9.sp, headingStyle.fontSize, .5.sp),
+                )
+                info?.holidayName?.let {
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = AppTheme.status.holiday)
+                }
+            } else Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     Formats.dayTitle(date).replaceFirstChar { it.uppercase() },
                     style = headingStyle,
@@ -132,18 +149,40 @@ fun DayPanel(
             }
         }
         Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
+            OutlinedButton(
+                onClick = onEdit, modifier = Modifier.weight(1f),
+                contentPadding = if (sketch) PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                    else androidx.compose.material3.ButtonDefaults.ContentPadding,
+            ) {
                 Icon(AppIcons.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Изменить", maxLines = 1)
+                if (sketch) SketchActionLabel("Изменить") else Text("Изменить", maxLines = 1)
             }
-            Button(onClick = onMark, enabled = markEnabled, modifier = Modifier.weight(1f)) {
+            Button(
+                onClick = onMark, enabled = markEnabled,
+                border = if (sketch && markEnabled) androidx.compose.foundation.BorderStroke(2.dp, Sketch.ink) else null,
+                modifier = Modifier.weight(1f),
+                contentPadding = if (sketch) PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                    else androidx.compose.material3.ButtonDefaults.ContentPadding,
+            ) {
                 Icon(AppIcons.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(markLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (sketch) SketchActionLabel(markLabel) else Text(markLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
+}
+
+@Composable
+private fun SketchActionLabel(text: String) {
+    BasicText(
+        text,
+        style = MaterialTheme.typography.labelLarge.copy(
+            color = androidx.compose.material3.LocalContentColor.current, letterSpacing = 0.sp,
+        ),
+        maxLines = 1, softWrap = false,
+        autoSize = TextAutoSize.StepBased(8.sp, 13.sp, .5.sp),
+    )
 }
 
 @Composable
@@ -173,7 +212,7 @@ private fun MainLine(
                 Text(
                     "${Formats.period(absence.startDate, absence.endDate)}$amount",
                     style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
+                    maxLines = if (LocalSketch.current) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -198,7 +237,7 @@ private fun MainLine(
                     text + more,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    maxLines = 1,
+                    maxLines = if (LocalSketch.current) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -244,14 +283,14 @@ private fun ExtrasLine(alarms: List<AlarmOfDay>, note: String?) {
                 if (on.isEmpty()) "будильник выключен" else on.joinToString(", ") { Formats.time(it.ring.at) },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
+                maxLines = if (LocalSketch.current) Int.MAX_VALUE else 1,
             )
             Spacer(Modifier.width(12.dp))
         }
         if (!note.isNullOrBlank()) {
             Icon(AppIcons.Note, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text(note, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(note, style = MaterialTheme.typography.bodyMedium, maxLines = if (LocalSketch.current) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -264,7 +303,7 @@ private fun InfoLine(icon: ImageVector, text: String, color: Color, onClick: (()
     ) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text(text, modifier = Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, modifier = Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium, color = color, maxLines = if (LocalSketch.current) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
         if (actionLabel != null) {
             Spacer(Modifier.width(4.dp))
             Icon(AppIcons.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = color)

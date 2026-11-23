@@ -28,17 +28,17 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.ceniorpomidor.workcalendar.domain.model.CalendarArt
+import io.github.ceniorpomidor.workcalendar.domain.model.AppTheme
 import io.github.ceniorpomidor.workcalendar.ui.theme.AppIcons
 
 @Composable
-internal fun CalendarArtPicker(current: CalendarArt, onDismiss: () -> Unit, onSelect: (CalendarArt) -> Unit) {
+internal fun CalendarArtPicker(current: AppTheme, onDismiss: () -> Unit, onSelect: (AppTheme) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Тема календаря") },
+        title = { Text("Тема приложения") },
         text = {
             Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                for (art in CalendarArt.entries) {
+                for (art in AppTheme.entries) {
                     CalendarThemeOption(art, current == art, Modifier.weight(1f)) { onSelect(art) }
                 }
             }
@@ -48,8 +48,13 @@ internal fun CalendarArtPicker(current: CalendarArt, onDismiss: () -> Unit, onSe
 }
 
 @Composable
-private fun CalendarThemeOption(art: CalendarArt, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val style = calendarStyle(art)
+private fun CalendarThemeOption(art: AppTheme, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val normal = calendarStyle(art)
+    val style = if (art == AppTheme.DEFAULT) normal.copy(
+        background = androidx.compose.ui.graphics.Color(0xFF131318), backgroundEnd = androidx.compose.ui.graphics.Color(0xFF17171B),
+        paper = androidx.compose.ui.graphics.Color(0xFF17171B), ink = androidx.compose.ui.graphics.Color(0xFFE5E1E9),
+        accent = androidx.compose.ui.graphics.Color(0xFFAAC7FF),
+    ) else normal
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(14.dp)
     Column(
