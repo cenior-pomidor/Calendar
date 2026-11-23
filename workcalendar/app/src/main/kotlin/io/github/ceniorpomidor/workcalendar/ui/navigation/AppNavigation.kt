@@ -1,6 +1,24 @@
 package io.github.ceniorpomidor.workcalendar.ui.navigation
 
 import io.github.ceniorpomidor.workcalendar.ui.theme.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -453,9 +471,9 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
             }
         }
         if (showBottomBar) {
-            NavigationBar(modifier = if (LocalSketch.current) Modifier.drawBehind {
-                drawLine(Sketch.ink, androidx.compose.ui.geometry.Offset.Zero, androidx.compose.ui.geometry.Offset(size.width, 0f), 3.dp.toPx())
-            } else Modifier) {
+            if (LocalSketch.current) SketchNavigation(navItems, currentRoute, navLabels, unconfirmed) {
+                navigateTopLevel(nav, it)
+            } else NavigationBar {
                 for (item in navItems) {
                     val info = item.info
                     val selected = currentRoute == info.route
@@ -471,6 +489,55 @@ private fun AppNavHost(container: AppContainer, settingsState: State<AppSettings
                         alwaysShowLabel = navLabels == NavLabels.ALWAYS,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SketchNavigation(
+    items: List<NavItem>,
+    route: String?,
+    labels: NavLabels,
+    unconfirmed: Int,
+    onClick: (String) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().background(Color(0xFFF3EDE2)).drawBehind {
+            val center = .75.dp.toPx()
+            drawLine(Color(0xFF1C1C1C), Offset(0f, center), Offset(size.width, center), 1.5.dp.toPx())
+        }.windowInsetsPadding(WindowInsets.navigationBars).selectableGroup(),
+    ) {
+        for (item in items) {
+            val info = item.info
+            val selected = route == info.route
+            val showLabel = labels == NavLabels.ALWAYS || (labels != NavLabels.NEVER && selected)
+            val ink = if (selected) Sketch.violet else Sketch.graphite
+            Column(
+                Modifier.weight(1f).height(62.dp).selectable(selected, role = Role.Tab) { onClick(info.route) }
+                    .padding(horizontal = 2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                BadgedBox(badge = {
+                    if (item == NavItem.UNCONFIRMED && unconfirmed > 0) Badge { Text(unconfirmed.toString()) }
+                }) {
+                    Icon(if (selected) info.selectedIcon else info.icon,
+                        contentDescription = if (showLabel) null else info.label, tint = ink)
+                }
+                if (showLabel) BasicText(
+                    info.label,
+                    Modifier.padding(top = 3.dp).drawBehind {
+                        if (selected) drawLine(Sketch.violet.copy(alpha = .46f),
+                            Offset(0f, size.height + 1.dp.toPx()), Offset(size.width, size.height),
+                            strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                    },
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = ink, letterSpacing = 0.sp, textAlign = TextAlign.Center, lineHeight = 13.sp,
+                    ),
+                    maxLines = 1, softWrap = false,
+                    autoSize = TextAutoSize.StepBased(7.sp, 11.sp, .5.sp),
+                )
             }
         }
     }

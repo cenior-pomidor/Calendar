@@ -19,11 +19,11 @@ import kotlin.random.Random
 internal val LocalSketch = staticCompositionLocalOf { false }
 
 internal object Sketch {
-    val paper = Color(0xFFF4F1EA)
+    val paper = Color(0xFFF6F1E7)
     val sheet = Color(0xFFFFFCF6)
     val ink = Color(0xFF141414)
     val graphite = Color(0xFF4A4A4A)
-    val violet = Color(0xFF7B2CBF)
+    val violet = Color(0xFF6D28D9)
     val blue = Color(0xFF1D4ED8)
     val lime = Color(0xFFC8FF2E)
     val red = Color(0xFFE63946)

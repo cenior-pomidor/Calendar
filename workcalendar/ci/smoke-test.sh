@@ -179,7 +179,9 @@ for theme in "Граффити" "Стандартная"; do
     adb shell wm density 320
     adb shell settings put system font_scale 1.3
     $UI route "calendar"
-    $UI dump sketch-360dp 0 "Изменить" "Отметить" || exit 1
+    $UI dump sketch-360dp 0 "=Изменить" "Отметить" \
+      "=Часы: факт / план" "=Подтверждено" "=Смены" \
+      "=Календарь" "=Финансы" "=Будильник" "=Настройки" || exit 1
     $UI route "finance"
     $UI dump sketch-finance 0 "Финансы" || exit 1
     $UI route "settings/display"

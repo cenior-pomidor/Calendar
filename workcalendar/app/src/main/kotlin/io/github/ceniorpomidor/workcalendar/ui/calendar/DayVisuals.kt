@@ -1,6 +1,12 @@
 package io.github.ceniorpomidor.workcalendar.ui.calendar
 
 import io.github.ceniorpomidor.workcalendar.ui.theme.*
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -176,6 +182,7 @@ internal fun DayCell(
     today: LocalDate,
     showHolidays: Boolean,
     compact: Boolean,
+    firstColumn: Boolean,
     height: Dp,
     style: CalendarStyle,
     onClick: () -> Unit,
@@ -204,16 +211,25 @@ internal fun DayCell(
     val lettering = if (progress == null) Modifier else Modifier.graphicsLayer {
         alpha = ((progress.value - 0.79f) / 0.21f).coerceIn(0f, 1f)
     }
-    val shape = RoundedCornerShape(if (style.wall) 3.dp else 8.dp)
-    val decoration = Modifier.padding(if (style.wall) 1.5.dp else 1.dp).clip(shape)
-        .dayPaint(style, mark, paint, progress, day.date.toEpochDay())
-        .then(if (style.wall) Modifier.border(.65.dp, Sketch.ink.copy(alpha = .30f), shape) else Modifier.border(0.7.dp, style.rule, shape))
+    val seed = day.date.toEpochDay()
+    val shape = RoundedCornerShape(8.dp)
+    val decoration = if (style.wall) {
+        Modifier.clip(RoundedCornerShape(0.dp))
+            .dayPaint(style, mark, paint, progress, seed)
+            .drawBehind {
+                val half = .5.dp.toPx()
+                drawLine(style.rule, Offset(size.width - half, 0f), Offset(size.width - half, size.height), 1.dp.toPx())
+                drawLine(style.rule, Offset(0f, size.height - half), Offset(size.width, size.height - half), 1.dp.toPx())
+                if (firstColumn) drawLine(style.rule, Offset(half, 0f), Offset(half, size.height), 1.dp.toPx())
+            }
+    } else Modifier.padding(1.dp).clip(shape)
+        .dayPaint(style, mark, paint, progress, seed).border(0.7.dp, style.rule, shape)
 
     Box(
         Modifier
             .fillMaxWidth()
             .height(height)
-            .alpha(if (inMonth) 1f else if (style.wall) .84f else .58f)
+            .alpha(if (inMonth) 1f else if (style.wall) 1f else .58f)
             .then(decoration)
             .then(if (selected && !style.wall) Modifier.border(1.5.dp, style.accent, shape) else Modifier)
             .semantics {
@@ -236,6 +252,14 @@ internal fun DayCell(
                 onLongClick = onLongClick,
             ),
     ) {
+        if (style.wall) {
+            val weekend = day.date.dayOfWeek.value >= DayOfWeek.SATURDAY.value
+            SketchCellLettering(
+                day.date.dayOfMonth, mark, payout, info, height, inMonth, weekend || holiday,
+                selected || isToday, seed, hasNote, hasExtra, compact, Modifier.then(lettering),
+            )
+            return@Box
+        }
         Column(
             Modifier.fillMaxWidth().then(lettering).padding(top = if (small) 0.dp else 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -244,8 +268,6 @@ internal fun DayCell(
                 number = day.date.dayOfMonth,
                 style = style,
                 today = isToday,
-                circled = selected || isToday,
-                seed = day.date.toEpochDay(),
                 holiday = holiday,
                 small = small,
                 modifier = Modifier.fillMaxWidth().height(numberHeight),
@@ -378,4 +400,87 @@ private fun LegendRow(label: String, marker: @Composable () -> Unit) {
         Box(Modifier.widthIn(min = 50.dp), contentAlignment = Alignment.Center) { marker() }
         Text(label, style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+@Composable
+private fun SketchCellLettering(
+    number: Int,
+    mark: CalendarMark?,
+    payout: Pair<String, Boolean>?,
+    info: DayInfo?,
+    height: Dp,
+    inMonth: Boolean,
+    weekend: Boolean,
+    circled: Boolean,
+    seed: Long,
+    hasNote: Boolean,
+    hasExtra: Boolean,
+    compact: Boolean,
+    modifier: Modifier,
+) {
+    val digitHeight = if (height < 38.dp) 13.dp else 19.dp
+    val ink = when {
+        !inMonth -> Sketch.ink.copy(alpha = .30f)
+        weekend -> Sketch.blue
+        else -> Sketch.ink
+    }
+    Column(modifier.fillMaxWidth().padding(top = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.fillMaxWidth().height(digitHeight + 7.dp), contentAlignment = Alignment.Center) {
+            val loop = if (circled) Modifier.drawBehind {
+                val w = size.width
+                val h = size.height
+                val skew = (seed.mod(9) - 4) * .025f * h
+                val path = Path().apply {
+                    moveTo(.40f * w, .13f * h)
+                    cubicTo(.89f * w, -.14f * h + skew, 1.11f * w, .45f * h, .90f * w, .72f * h)
+                    cubicTo(.68f * w, 1.08f * h, .05f * w, 1.09f * h, .04f * w, .50f * h)
+                    cubicTo(.04f * w, .20f * h + skew, .31f * w, .08f * h, .60f * w, .10f * h)
+                }
+                drawPath(path, Sketch.red, style = Stroke(2.6.dp.toPx(), cap = StrokeCap.Round))
+            } else Modifier
+            Box(
+                Modifier.fillMaxWidth().padding(start = 3.dp, end = if (payout == null) 3.dp else 15.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(loop.padding(horizontal = 4.dp, vertical = 2.dp), contentAlignment = Alignment.Center) {
+                    GraffitiNumber(number.toString(), digitHeight, ink)
+                }
+            }
+            if (payout != null) {
+                val color = when {
+                    payout.second -> Sketch.orange
+                    payout.first == "З" -> Color(0xFFF3A5C9)
+                    else -> Color(0xFFFFD766)
+                }
+                Box(
+                    Modifier.align(Alignment.TopEnd).padding(end = 1.dp).size(14.dp)
+                        .background(color, androidx.compose.foundation.shape.CircleShape)
+                        .border(1.dp, Sketch.ink, androidx.compose.foundation.shape.CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    SketchCellText(payout.first, 8.sp, 12.dp)
+                }
+            }
+        }
+        if (mark != null) SketchCellText(mark.label, 10.sp, 13.dp)
+        val captionRoom = height - digitHeight - 9.dp - (if (mark != null) 13.dp else 0.dp) - 4.dp
+        if (!compact && info != null && captionRoom >= 12.dp) {
+            val lines = if (info.earned != null && height >= 60.dp) info.lines + compactMoney(info.earned) else info.lines
+            lines.take((captionRoom.value / 12).toInt()).forEach { SketchCellText(it, 9.sp, 12.dp) }
+        }
+    }
+    if (hasExtra || hasNote) Box(modifier.fillMaxWidth().height(height).padding(1.dp)) {
+        if (hasExtra) Icon(AppIcons.Add, null, Modifier.align(Alignment.BottomStart).size(8.dp), tint = Sketch.violet)
+        if (hasNote) Icon(AppIcons.EditNote, null, Modifier.align(Alignment.BottomEnd).size(8.dp), tint = Sketch.graphite)
+    }
+}
+
+@Composable
+private fun SketchCellText(text: String, preferred: androidx.compose.ui.unit.TextUnit, height: Dp) {
+    BasicText(
+        text, Modifier.fillMaxWidth().height(height).padding(horizontal = 1.dp),
+        style = markerText.copy(color = Sketch.ink, fontSize = preferred, textAlign = TextAlign.Center),
+        maxLines = 1, softWrap = false,
+        autoSize = TextAutoSize.StepBased(6.sp, preferred, .5.sp),
+    )
 }

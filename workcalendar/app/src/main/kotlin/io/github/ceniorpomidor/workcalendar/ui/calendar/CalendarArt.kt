@@ -45,7 +45,7 @@ internal data class CalendarStyle(
 ) {
     val wall get() = art == AppTheme.GRAFFITI
     val dark get() = paper.luminance() < 0.4f
-    val rule get() = ink.copy(alpha = 0.13f)
+    val rule get() = if (wall) Color(0xFF222222).copy(alpha = .22f) else ink.copy(alpha = 0.13f)
     val secondaryInk get() = lerp(ink, paper, 0.18f)
     val holiday get() = if (wall) Sketch.blue else if (dark) Color(0xFFFFC8BC) else Color(0xFF853C36)
     val onAccent get() = if (dark) Color(0xFF15191D) else Color.White
@@ -94,22 +94,10 @@ internal fun CalendarDate(
     holiday: Boolean,
     small: Boolean,
     modifier: Modifier = Modifier,
-    circled: Boolean = today,
-    seed: Long = 0,
 ) {
     val type = style.dateStyle(small)
     Box(modifier, contentAlignment = Alignment.Center) {
-        val badge = if (style.wall && circled) Modifier.drawBehind {
-            val w = size.width
-            val h = size.height
-            val k = seed.mod(7) * .014f
-            val loop = androidx.compose.ui.graphics.Path().apply {
-                moveTo(.44f*w, h*.09f)
-                cubicTo(w*(1+k), -h*.04f, w*1.10f, h*.87f, w*.57f, h*.92f)
-                cubicTo(-w*.10f, h*1.03f, -w*.06f, h*.12f, w*.54f, h*.07f)
-            }
-            drawPath(loop, if (today) Sketch.red else Sketch.violet, style = androidx.compose.ui.graphics.drawscope.Stroke(1.8.dp.toPx()))
-        }.padding(horizontal = 5.dp) else if (today) Modifier.background(style.accent, CircleShape).padding(horizontal = 4.dp) else Modifier
+        val badge = if (today) Modifier.background(style.accent, CircleShape).padding(horizontal = 4.dp) else Modifier
         BasicText(
             number.toString(),
             modifier = badge,

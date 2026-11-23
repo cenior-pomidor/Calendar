@@ -57,15 +57,13 @@ private fun DrawScope.marker(mark: CalendarMark?, style: CalendarStyle, seed: Lo
     }
     when (mark) {
         null -> Unit
-        CalendarMark.CONFIRMED -> stroke(Sketch.lime.copy(alpha = .82f), .28f, minOf(.26f*h, 17.dp.toPx()))
+        CalendarMark.CONFIRMED -> stroke(Sketch.lime.copy(alpha = .65f), minOf(.42f, 16.dp.toPx() / h), minOf(.38f*h, 15.dp.toPx()))
         CalendarMark.STARTED -> {
             stroke(Sketch.blue, .86f, 2.dp.toPx())
             stroke(Sketch.blue, .93f, 1.dp.toPx())
-            val tip = Offset(.85f * w, .10f * h)
-            drawLine(Sketch.blue, tip - Offset(4.dp.toPx(), -2.dp.toPx()), tip, 1.5.dp.toPx())
-            drawLine(Sketch.blue, tip, tip + Offset(0f, 4.dp.toPx()), 1.5.dp.toPx())
+
         }
-        CalendarMark.SHIFT -> stroke(Sketch.violet, .91f, 2.dp.toPx())
+        CalendarMark.SHIFT -> stroke(Sketch.violet, .94f, 1.7.dp.toPx())
         else -> stroke(mark.fill(style), .29f, minOf(.27f*h, 18.dp.toPx()))
     }
 }

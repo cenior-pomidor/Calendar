@@ -3,7 +3,11 @@ package io.github.ceniorpomidor.workcalendar.ui.calendar
 import io.github.ceniorpomidor.workcalendar.ui.theme.*
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -57,7 +61,6 @@ import com.kizitonwose.calendar.core.OutDateStyle
 import com.kizitonwose.calendar.core.daysOfWeek
 import io.github.ceniorpomidor.workcalendar.AppContainer
 import io.github.ceniorpomidor.workcalendar.domain.alarm.AlarmPlanner
-import io.github.ceniorpomidor.workcalendar.domain.model.AppTheme
 import io.github.ceniorpomidor.workcalendar.domain.model.AbsenceType
 import io.github.ceniorpomidor.workcalendar.domain.model.AlarmItem
 import io.github.ceniorpomidor.workcalendar.domain.model.AlarmRepeat
@@ -209,18 +212,27 @@ fun CalendarScreen(
         containerColor = style.background,
         contentColor = style.ink,
         topBar = {
-            TopAppBar(
-                modifier = if (style.wall) Modifier.calendarBackdrop(style) else Modifier,
+            if (style.wall) SketchCalendarHeader(
+                month = visibleMonth,
+                onPrevious = { scope.launch { calendarState.animateScrollToMonth(visibleMonth.minusMonths(1)) } },
+                onNext = { scope.launch { calendarState.animateScrollToMonth(visibleMonth.plusMonths(1)) } },
+                onToday = {
+                    vm.select(today)
+                    scope.launch { calendarState.animateScrollToMonth(currentMonth) }
+                },
+                onSearch = onSearch,
+                onHelp = { legend = true },
+            ) else TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (style.wall) Color.Transparent else style.background,
+                    containerColor = style.background,
                     titleContentColor = style.ink,
                     actionIconContentColor = style.ink,
                 ),
                 title = {
-                    if (style.wall) MonthTag(Formats.monthTitle(visibleMonth), visibleMonth.monthValue) else BasicText(
+                    BasicText(
                         Formats.monthTitle(visibleMonth),
                         style = style.titleStyle.copy(color = style.ink),
-                        maxLines = if (style.wall) 1 else 2,
+                        maxLines = 2,
                         autoSize = TextAutoSize.StepBased(14.sp, style.titleStyle.fontSize, 1.sp),
                     )
                 },
@@ -265,6 +277,7 @@ fun CalendarScreen(
                             today = today,
                             showHolidays = state.settings.calendar.showHolidays,
                             compact = false,
+                            firstColumn = date.dayOfWeek == firstDayOfWeek,
                             height = cellHeight,
                             style = style,
                             paint = paints[date],
@@ -295,7 +308,8 @@ fun CalendarScreen(
                 onOpenPayout = { onOpenPayout(it.key) },
                 onOpenUnconfirmed = onOpenUnconfirmed,
                 onSetupSchedule = onSetupSchedule,
-                headingStyle = style.titleStyle.copy(fontSize = if (art == AppTheme.GRAFFITI) 20.sp else 16.sp),
+                headingStyle = if (style.wall) MaterialTheme.typography.titleMedium.copy(fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                    else style.titleStyle.copy(fontSize = 16.sp),
                 modifier = modifier.padding(horizontal = 12.dp).padding(top = 6.dp, bottom = 4.dp).calendarSheet(style),
             )
         }
@@ -408,6 +422,10 @@ private fun CalendarState.isAligned(): Boolean {
 /** Totals of the month; a month that is not loaded yet keeps the same layout with dashes. */
 @Composable
 private fun MonthSummaryRow(summary: PeriodSummary?, style: CalendarStyle, onClick: () -> Unit) {
+    if (style.wall) {
+        SketchSummary(summary, style, onClick)
+        return
+    }
     Row(
         Modifier
             .fillMaxWidth()
@@ -440,6 +458,38 @@ private fun SummaryTile(label: String, value: String, style: CalendarStyle, onCl
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = valueColor)
                 Spacer(Modifier.width(2.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SketchSummary(summary: PeriodSummary?, style: CalendarStyle, onClick: () -> Unit) {
+    val values = listOf(
+        "Часы: факт / план" to summary?.let { "${Formats.hoursDecimal(it.workedMinutes)} / ${Formats.hoursDecimal(it.plannedMinutes)}" },
+        "Подтверждено" to summary?.let { money(it.confirmedEarnings) },
+        "Смены" to summary?.let { "${it.workedShifts} из ${it.scheduledShifts}" },
+    )
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp)
+            .calendarSheet(style).clickable(onClick = onClick).padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        values.forEachIndexed { index, (label, value) ->
+            val rule = if (index == 0) Modifier else Modifier.drawBehind {
+                drawLine(style.rule, Offset(0f, 1.dp.toPx()), Offset(0f, size.height - 1.dp.toPx()), 1.dp.toPx())
+            }
+            Column(
+                Modifier.weight(if (index == 2) .67f else 1.15f).then(rule).padding(horizontal = 5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                BasicText(label, Modifier.fillMaxWidth(), style = MaterialTheme.typography.labelSmall.copy(
+                    color = style.secondaryInk, textAlign = TextAlign.Center, letterSpacing = 0.sp,
+                ), maxLines = 1, softWrap = false, autoSize = TextAutoSize.StepBased(7.sp, 11.sp, .5.sp))
+                BasicText(value ?: "—", Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleSmall.copy(
+                    color = if (index == 1) style.accent else style.ink,
+                    fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, letterSpacing = 0.sp,
+                ), maxLines = 1, softWrap = false, autoSize = TextAutoSize.StepBased(7.sp, 15.sp, .5.sp))
             }
         }
     }
