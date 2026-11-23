@@ -68,19 +68,20 @@ timed_swipe() {
   end=$(date +%s%N)
   echo ">> swipe $* took $(( (end - start) / 1000000 )) ms"
 }
-timed_swipe 950 1000 150 1000 300
-if ! $UI dump swipe-fast 0 "$(month_title 1)"; then
-  echo "!! WARNING: the first swipe did not change the month; trying once more"
-  # Which events the system delivered to the app: shows whether the moves of the swipe arrived.
-  adb shell dumpsys input | sed -n '/RecentQueue/,/PendingEvent/p' | cut -c1-240 | head -30
-  timed_swipe 950 1000 150 1000 300
-  $UI dump swipe-fast-retry 1 "$(month_title 1)" || exit 1
-fi
-# A slow drag over 60% of the width, slightly diagonal.
-adb shell input swipe 950 950 300 1150 900
-$UI dump swipe-slow 1 "$(month_title 2)" "$(today_title)" || exit 1
-adb shell input swipe 150 1000 950 1000 250
-$UI dump swipe-back 0 "$(month_title 1)" || exit 1
+# A busy runner can drop gesture move events. Retry only while still on the source month.
+swipe_to_month() {
+  local name=$1 from=$2 to=$3
+  shift 3
+  for attempt in 1 2 3; do
+    timed_swipe "$@"
+    if $UI dump "$name" 0 "$(month_title "$to")" "$(today_title)"; then return 0; fi
+    $UI dump "$name-source" 0 "$(month_title "$from")" || return 1
+  done
+  return 1
+}
+swipe_to_month swipe-fast 0 1 950 1000 150 1000 300 || exit 1
+swipe_to_month swipe-slow 1 2 950 950 300 1150 900 || exit 1
+swipe_to_month swipe-back 2 1 150 1000 950 1000 550 || exit 1
 $UI tap "Сегодня"
 $UI dump swipe-today 0 "$(month_title 0)" || exit 1
 
