@@ -106,6 +106,10 @@ $UI show "Ещё должны выплатить"
 $UI dump finance-payouts 1 "Рассчитано" "Пришло" "Ещё должны выплатить" || exit 1
 $UI tap "Зарплата" 1
 $UI dump received-dialog 0 "Сколько пришло" || exit 1
+$UI tap "Сколько пришло" || exit 1
+adb shell input keycombination 113 29
+$UI type 1500
+$UI hide-keyboard
 $UI tap "Сохранить" 1
 sleep 2
 $UI show "Ещё должны выплатить"
