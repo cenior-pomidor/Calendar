@@ -59,11 +59,12 @@ private fun DrawScope.marker(mark: CalendarMark?, style: CalendarStyle, seed: Lo
         null -> Unit
         CalendarMark.CONFIRMED -> stroke(Sketch.lime.copy(alpha = .65f), minOf(.42f, 16.dp.toPx() / h), minOf(.38f*h, 15.dp.toPx()))
         CalendarMark.STARTED -> {
-            stroke(Sketch.blue, .86f, 2.dp.toPx())
-            stroke(Sketch.blue, .93f, 1.dp.toPx())
+            val underline = minOf(.68f, 24.dp.toPx() / h)
+            stroke(Sketch.blue, underline, 2.dp.toPx())
+            stroke(Sketch.blue, underline + 2.dp.toPx() / h, 1.dp.toPx())
 
         }
-        CalendarMark.SHIFT -> stroke(Sketch.violet, .94f, 1.7.dp.toPx())
+        CalendarMark.SHIFT -> stroke(Sketch.violet, minOf(.68f, 24.dp.toPx() / h), 1.7.dp.toPx())
         else -> stroke(mark.fill(style), .29f, minOf(.27f*h, 18.dp.toPx()))
     }
 }

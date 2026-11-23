@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,9 +60,9 @@ internal fun GraffitiNumber(number: String, digitHeight: Dp, tint: Color) {
     if (ids.any { it == 0 }) {
         BasicText(
             number,
-            style = MaterialTheme.typography.labelLarge.copy(
+            style = androidx.compose.ui.text.TextStyle(
                 color = tint, fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center, letterSpacing = 0.sp,
+                textAlign = TextAlign.Center, platformStyle = PlatformTextStyle(includeFontPadding = false),
             ),
             maxLines = 1,
             softWrap = false,
